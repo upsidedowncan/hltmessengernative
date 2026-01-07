@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>HLT Call Bridge</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <style>
+      body { font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; background: #000; color: #fff; }
+    </style>
+  </head>
+  <body>
+    <div id="status">Initializing...</div>
+    <script>
+      let peer;
+      let currentCall;
+      let localStream;
+
+      function log(msg) {
+        if (window.ReactNativeWebView) {
+          window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'log', message: msg }));
+        }
+        console.log(msg);
+      }
+
+      function sendToNative(data) {
+        if (window.ReactNativeWebView) {
+          window.ReactNativeWebView.postMessage(JSON.stringify(data));
+        }
+      }
+
+      async function getLocalStream() {
+        const constraints = { audio: true, video: false };
+        try {
+          return await navigator.mediaDevices.getUserMedia(constraints);
+        } catch (err) {
+          log('Stream Error: ' + err.message);
+          throw err;
+        }
+      }
+
+      function initPeer(id) {
+        peer = new Peer('hlt-' + id);
+        
+        peer.on('open', (id) => {
+          log('Peer ID: ' + id);
+          document.getElementById('status').innerText = 'Ready';
+          sendToNative({ type: 'status', status: 'Ready' });
+        });
+
+        peer.on('call', (call) => {
+          currentCall = call;
+          sendToNative({ type: 'incoming-call' });
+        });
+
+        peer.on('error', (err) => {
+          log('Peer error: ' + err.type);
+          sendToNative({ type: 'error', error: err.type });
+        });
+      }
+
+      async function startCall(targetId) {
+        try {
+          log('Starting call to: ' + targetId);
+          localStream = await getLocalStream();
+          currentCall = peer.call('hlt-' + targetId, localStream);
+          setupCallListeners(currentCall);
+        } catch (err) {
+          log('Start Call Media error: ' + err.message);
+        }
+      }
+
+      function setupCallListeners(call) {
+        call.on('stream', (remoteStream) => {
+          sendToNative({ type: 'remote-stream' });
+          const audio = new Audio();
+          audio.srcObject = remoteStream;
+          audio.play();
+        });
+
+        call.on('close', () => {
+          sendToNative({ type: 'call-end' });
+        });
+      }
+
+      async function acceptCall() {
+        try {
+          log('Accepting call...');
+          localStream = await getLocalStream();
+          currentCall.answer(localStream);
+          setupCallListeners(currentCall);
+        } catch (err) {
+          log('Accept Media error: ' + err.message);
+        }
+      }
+
+      function endCall() {
+        if (currentCall) currentCall.close();
+        if (localStream) localStream.getTracks().forEach(t => t.stop());
+      }
+
+      // Handle messages from React Native
+      window.addEventListener('message', (event) => {
+        try {
+          const data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
+          if (data.type === 'init') initPeer(data.userId);
+          if (data.type === 'start') startCall(data.peerId);
+          if (data.type === 'accept') acceptCall();
+          if (data.type === 'end') endCall();
+          if (data.type === 'mute') {
+            if (localStream) localStream.getAudioTracks()[0].enabled = !data.muted;
+          }
+        } catch (e) {
+          log('PostMessage Error: ' + e.message);
+        }
+      });
+    </script>
+  </body>
+</html>

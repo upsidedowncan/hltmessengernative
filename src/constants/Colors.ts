@@ -1,0 +1,26 @@
+export const Colors = {
+  light: {
+    text: '#000',
+    background: '#f2f2f2',
+    tint: '#007AFF',
+    tabIconDefault: '#8E8E93',
+    tabIconSelected: '#007AFF',
+    glass: 'rgba(255, 255, 255, 0.7)',
+    border: 'rgba(0, 0, 0, 0.1)',
+    cardBackground: '#fff',
+    secondaryContainer: 'rgba(0, 0, 0, 0.05)', // Minimalist light gray
+    onSecondaryContainer: '#000',
+  },
+  dark: {
+    text: '#fff',
+    background: '#000',
+    tint: '#0A84FF',
+    tabIconDefault: '#8E8E93',
+    tabIconSelected: '#0A84FF',
+    glass: 'rgba(30, 30, 30, 0.6)',
+    border: 'rgba(255, 255, 255, 0.1)',
+    cardBackground: '#111',
+    secondaryContainer: 'rgba(255, 255, 255, 0.1)', // Minimalist dark gray
+    onSecondaryContainer: '#fff',
+  },
+};

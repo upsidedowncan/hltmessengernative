@@ -1,0 +1,74 @@
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import { useAuth } from './AuthContext';
+import { signalingService, SignalingMessage } from '../services/SignalingService';
+import { callService } from '../services/CallService';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { MainStackParamList } from '../navigation/MainNavigator';
+
+import { featureFlagService } from '../services/FeatureFlagService';
+import { useFeatureFlags } from './FeatureFlagContext';
+
+interface CallContextType {
+  isCallInProgress: boolean;
+  setIsCallInProgress: (val: boolean) => void;
+}
+
+const CallContext = createContext<CallContextType | undefined>(undefined);
+
+export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { user } = useAuth();
+  const { isEnabled, isLoading: flagsLoading } = useFeatureFlags();
+  const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
+  const [isCallInProgress, setIsCallInProgress] = useState(false);
+
+  useEffect(() => {
+    if (flagsLoading) return;
+
+    const isNativeSupported = callService.isSupported();
+    const isWebEnabled = isEnabled('ENABLE_WEB_CALLING');
+    const isCallingActive = isEnabled('ENABLE_CALLING');
+
+    if (user && (isNativeSupported || isWebEnabled)) {
+      if (isNativeSupported && isCallingActive) {
+        callService.setup(user.id);
+      } else {
+        // Even in web mode, we need to subscribe to signaling for the offer
+        signalingService.subscribe(user.id, () => {}); 
+      }
+      
+      const handleIncomingSignal = (message: SignalingMessage) => {
+        console.log('Incoming signal:', message.type, 'from:', message.senderId);
+        if (message.type === 'offer' && !isCallInProgress) {
+          setIsCallInProgress(true);
+          // Navigate to CallScreen for incoming call
+          navigation.navigate('Call', {
+            friendId: message.senderId,
+            friendName: message.senderName || 'Unknown',
+            isIncoming: true,
+          });
+        }
+      };
+
+      signalingService.subscribe(user.id, handleIncomingSignal);
+      
+      return () => {
+        signalingService.unsubscribe(handleIncomingSignal);
+      };
+    }
+  }, [user, isCallInProgress, flagsLoading, isEnabled]);
+
+  return (
+    <CallContext.Provider value={{ isCallInProgress, setIsCallInProgress } as any}>
+      {children}
+    </CallContext.Provider>
+  );
+};
+
+export const useCall = () => {
+  const context = useContext(CallContext);
+  if (context === undefined) {
+    throw new Error('useCall must be used within a CallProvider');
+  }
+  return context;
+};

@@ -1,0 +1,51 @@
+name: Build iOS (Unsigned)
+on: workflow_dispatch # Adds a "Run Workflow" button in GitHub UI
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: Prebuild (Generate Native iOS Code)
+        run: npx expo prebuild --platform ios --clean
+
+      - name: Build Unsigned IPA
+        run: |
+          cd ios
+          # We force xcodebuild to ignore signing constraints
+          xcodebuild -workspace *.xcworkspace \
+            -scheme "$(ls -d *.xcodeproj | cut -d. -f1)" \
+            -configuration Release \
+            -sdk iphoneos \
+            -archivePath $PWD/build/App.xcarchive \
+            clean archive \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            PROVISIONING_PROFILE=""
+
+      - name: Package into IPA
+        run: |
+          cd ios
+          mkdir -p Payload
+          # Move the .app into the Payload folder
+          mv build/App.xcarchive/Products/Applications/*.app Payload/
+          # Zip it up into an IPA
+          zip -r app-release.ipa Payload
+
+      - name: Upload IPA
+        uses: actions/upload-artifact@v3
+        with:
+          name: Unsigned-Messenger-App
+          path: ios/app-release.ipa

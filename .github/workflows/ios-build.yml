@@ -23,17 +23,19 @@ jobs:
       - name: Build Unsigned IPA
         run: |
           cd ios
-          # We force xcodebuild to ignore signing constraints
           xcodebuild -workspace *.xcworkspace \
             -scheme "$(ls -d *.xcodeproj | cut -d. -f1)" \
             -configuration Release \
             -sdk iphoneos \
             -archivePath $PWD/build/App.xcarchive \
+            -jobs 10 \
+            -quiet \
             clean archive \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY="" \
-            PROVISIONING_PROFILE=""
+            PROVISIONING_PROFILE="" \
+            ENABLE_USER_SCRIPT_SANDBOXING=NO
 
       - name: Package into IPA
         run: |

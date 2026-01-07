@@ -6,7 +6,7 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "newArchEnabled": true,
+    "newArchEnabled": false,
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
@@ -26,6 +26,7 @@
     ],
     "ios": {
       "supportsTablet": true,
+      "newArchEnabled": false,
       "infoPlist": {
         "NSMicrophoneUsageDescription": "Allow $(PRODUCT_NAME) to access your microphone.",
         "ITSAppUsesNonExemptEncryption": false
@@ -34,6 +35,7 @@
       "bundleIdentifier": "net.shapes.hlt"
     },
     "android": {
+      "newArchEnabled": false,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"

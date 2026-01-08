@@ -11,7 +11,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: 18
+          node-version: 24
           cache: 'npm'
 
       - name: Install Dependencies
@@ -28,7 +28,7 @@ jobs:
             -configuration Debug \
             -sdk iphoneos \
             -archivePath $PWD/build/App.xcarchive \
-            -jobs 10 \
+            -jobs 6 \
             -quiet \
             clean archive \
             CODE_SIGNING_ALLOWED=NO \
@@ -47,7 +47,9 @@ jobs:
           zip -r app-release.ipa Payload
 
       - name: Upload IPA
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: Unsigned-Messenger-App
           path: ios/app-release.ipa
+
+

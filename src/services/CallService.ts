@@ -27,6 +27,8 @@ class CallService {
   private onCallEndCallback: (() => void) | null = null;
   private messageHandler: ((message: SignalingMessage) => void) | null = null;
   private pendingOffer: any = null;
+  private pendingCandidates: any[] = [];
+  private isRemoteDescriptionSet = false;
 
   private configuration = {
     iceServers: [
@@ -74,6 +76,8 @@ class CallService {
   private async createPeerConnection() {
     if (!this.isSupported()) return;
     this.pc = new RTCPeerConnection(this.configuration);
+    this.isRemoteDescriptionSet = false;
+    this.pendingCandidates = [];
 
     this.pc.onicecandidate = (event: any) => {
       if (event.candidate && this.friendId) {
@@ -134,6 +138,9 @@ class CallService {
     await this.createPeerConnection();
 
     await this.pc!.setRemoteDescription(new RTCSessionDescription(this.pendingOffer));
+    this.isRemoteDescriptionSet = true;
+    await this.processPendingCandidates();
+
     const answer = await this.pc!.createAnswer();
     await this.pc!.setLocalDescription(answer);
 
@@ -149,12 +156,27 @@ class CallService {
   private async handleAnswer(answer: any) {
     if (this.pc && this.isSupported()) {
       await this.pc.setRemoteDescription(new RTCSessionDescription(answer));
+      this.isRemoteDescriptionSet = true;
+      await this.processPendingCandidates();
     }
   }
 
   private async handleIceCandidate(candidate: any) {
     if (this.pc && this.isSupported()) {
-      await this.pc.addIceCandidate(new RTCIceCandidate(candidate));
+      if (this.isRemoteDescriptionSet) {
+        await this.pc.addIceCandidate(new RTCIceCandidate(candidate));
+      } else {
+        this.pendingCandidates.push(candidate);
+      }
+    }
+  }
+
+  private async processPendingCandidates() {
+    if (this.pc && this.pendingCandidates.length > 0) {
+      for (const candidate of this.pendingCandidates) {
+        await this.pc.addIceCandidate(new RTCIceCandidate(candidate));
+      }
+      this.pendingCandidates = [];
     }
   }
 
@@ -178,6 +200,8 @@ class CallService {
 
     this.remoteStream = null;
     this.friendId = null;
+    this.isRemoteDescriptionSet = false;
+    this.pendingCandidates = [];
 
     if (this.onCallEndCallback) {
       this.onCallEndCallback();

@@ -25,17 +25,8 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     if (flagsLoading) return;
 
-    const isNativeSupported = callService.isSupported();
-    const isWebEnabled = isEnabled('ENABLE_WEB_CALLING');
-    const isCallingActive = isEnabled('ENABLE_CALLING');
-
-    if (user && (isNativeSupported || isWebEnabled)) {
-      if (isNativeSupported && isCallingActive) {
-        callService.setup(user.id);
-      } else {
-        // Even in web mode, we need to subscribe to signaling for the offer
-        signalingService.subscribe(user.id, () => {}); 
-      }
+    if (user && callService.isSupported() && isEnabled('ENABLE_CALLING')) {
+      callService.setup(user.id);
       
       const handleIncomingSignal = (message: SignalingMessage) => {
         console.log('Incoming signal:', message.type, 'from:', message.senderId);

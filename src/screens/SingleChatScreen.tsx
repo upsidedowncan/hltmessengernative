@@ -158,7 +158,6 @@ export const SingleChatScreen = () => {
   }, []);
 
   const nativeEnabled = isEnabled('ENABLE_CALLING') && callService.isSupported();
-  const webEnabled = isEnabled('ENABLE_WEB_CALLING');
 
   const loadCachedMessages = async () => {
     try {
@@ -852,7 +851,7 @@ export const SingleChatScreen = () => {
       <AppBar 
         centerComponent={renderHeaderTitle()}
         rightComponent={
-          (nativeEnabled || webEnabled) ? (
+          (nativeEnabled) ? (
             <TouchableOpacity 
               onPress={() => {
                 setIsCallInProgress(true);

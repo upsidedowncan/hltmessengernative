@@ -1,5 +1,4 @@
 export * from './NavigationBar';
-export * from './WebCallBridge';
 export * from './MaterialTabBar';
 export * from './Button';
 export * from './TextField';

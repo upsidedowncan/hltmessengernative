@@ -8,18 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import { useAppTheme, useFeatureFlags } from '../context/FeatureFlagContext';
 import { useCall } from '../context/CallContext';
-import { WebCallBridge, WebCallBridgeHandle } from '../components/WebCallBridge';
 import { Audio } from 'expo-av';
-
-let MediaStream: any;
-let RTCView: any;
-try {
-  const WebRTC = require('react-native-webrtc');
-  MediaStream = WebRTC.MediaStream;
-  RTCView = WebRTC.RTCView;
-} catch (e) {
-  // Not available
-}
 
 type CallScreenRouteProp = RouteProp<MainStackParamList, 'Call'>;
 
@@ -28,7 +17,6 @@ export const CallScreen = () => {
   const navigation = useNavigation();
   const { friendId, friendName, isIncoming } = route.params;
   const { theme, isDarkMode } = useAppTheme();
-  const { isEnabled } = useFeatureFlags();
   const { user, profile } = useAuth();
   const { setIsCallInProgress } = useCall() as any;
   
@@ -37,11 +25,7 @@ export const CallScreen = () => {
   const [isMuted, setIsMuted] = useState(false);
   const [hasAnswered, setHasAnswered] = useState(!isIncoming);
   
-  const webBridgeRef = useRef<WebCallBridgeHandle>(null);
   const ringingSoundRef = useRef<Audio.Sound | null>(null);
-  const readyHeartbeatRef = useRef<any>(null);
-  const isWebMode = !callService.isSupported() && isEnabled('ENABLE_WEB_CALLING');
-  const peerReadyReceived = useRef(false);
 
   const playRinging = async () => {
     if (isIncoming) return;
@@ -68,156 +52,64 @@ export const CallScreen = () => {
     }
   };
 
-  const stopHeartbeat = () => {
-    if (readyHeartbeatRef.current) {
-      clearInterval(readyHeartbeatRef.current);
-      readyHeartbeatRef.current = null;
-    }
-  };
-
   useEffect(() => {
     setIsCallInProgress(true);
     if (!isIncoming) playRinging();
 
-    const handleSignal = (msg: SignalingMessage) => {
-      if (msg.type === 'peer-ready' && msg.senderId === friendId) {
-        if (!peerReadyReceived.current) {
-          console.log('Recipient is ready! Starting PeerJS call.');
-          peerReadyReceived.current = true;
-          webBridgeRef.current?.startCall(friendId);
-        }
-      }
-    };
-    signalingService.subscribe(user?.id || '', handleSignal);
+    if (!callService.isSupported()) {
+      navigation.goBack();
+      return;
+    }
 
-    if (!isWebMode) {
-      if (!callService.isSupported()) {
+    callService.setCallbacks(
+      (stream) => {
+        console.log('Native remote stream received');
+        setRemoteStream(stream);
+        setCallStatus('Connected');
+        stopRinging();
+      },
+      () => {
+        setIsCallInProgress(false);
+        stopRinging();
         navigation.goBack();
-        return;
       }
-      callService.setCallbacks(
-        (stream) => {
-          setRemoteStream(stream);
-          setCallStatus('Connected');
-          stopRinging();
-        },
-        () => {
-          setIsCallInProgress(false);
-          stopRinging();
-          navigation.goBack();
-        }
-      );
+    );
 
-      if (!isIncoming) {
-        callService.startCall(friendId, profile?.full_name || profile?.username || 'Unknown');
-      }
-    } else {
-      if (!isIncoming) {
-        signalingService.sendSignal(friendId, {
-          type: 'offer',
-          senderId: user?.id || '',
-          senderName: profile?.full_name || profile?.username || 'Unknown',
-          data: { webMode: true }
-        });
-      }
+    if (!isIncoming) {
+      callService.startCall(friendId, profile?.full_name || profile?.username || 'Unknown');
     }
 
     return () => {
       setIsCallInProgress(false);
       stopRinging();
-      stopHeartbeat();
-      signalingService.unsubscribe(handleSignal);
-      if (!isWebMode) callService.endCall();
-      else webBridgeRef.current?.endCall();
+      callService.endCall();
     };
   }, []);
-
-  const startWebCallWithRetry = (friendId: string, attempts = 0) => {
-    if (peerReadyReceived.current) return;
-
-    if (attempts > 15) { // 30 seconds total
-      setCallStatus('Peer Unavailable');
-      return;
-    }
-    
-    console.log(`Waiting for recipient bridge... attempt ${attempts + 1}`);
-    
-    setTimeout(() => {
-      if (callStatus !== 'Connected' && !isIncoming && !peerReadyReceived.current) {
-        startWebCallWithRetry(friendId, attempts + 1);
-      }
-    }, 2000);
-  };
 
   const handleAnswer = async () => {
     setHasAnswered(true);
     setCallStatus('Connecting...');
-    if (isWebMode) {
-      webBridgeRef.current?.acceptCall();
-    } else {
-      await callService.acceptCall();
-    }
+    await callService.acceptCall();
   };
 
   const handleDecline = () => {
-    if (isWebMode) webBridgeRef.current?.endCall();
-    else callService.endCall();
+    callService.endCall();
     navigation.goBack();
   };
 
   const handleHangup = () => {
-    if (isWebMode) webBridgeRef.current?.endCall();
-    else callService.endCall();
+    callService.endCall();
     navigation.goBack();
   };
 
   const toggleMute = () => {
     const nextMuted = !isMuted;
     setIsMuted(nextMuted);
-    if (isWebMode) webBridgeRef.current?.toggleMute(nextMuted);
+    // Add mute logic to callService if needed
   };
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: isDarkMode ? '#000' : '#f2f2f7' }]}>
-      {isWebMode && user && (
-        <WebCallBridge 
-          ref={webBridgeRef}
-          userId={user.id}
-          onStatusChange={(status) => {
-             if (status === 'Ready' && !isIncoming) {
-                startWebCallWithRetry(friendId);
-             }
-          }}
-          onReady={() => {
-            if (isIncoming) {
-              stopHeartbeat();
-              const sendReady = () => {
-                if (callStatus !== 'Connected') {
-                  signalingService.sendSignal(friendId, {
-                    type: 'peer-ready',
-                    senderId: user.id
-                  });
-                } else {
-                  stopHeartbeat();
-                }
-              };
-              sendReady();
-              readyHeartbeatRef.current = setInterval(sendReady, 2000);
-            }
-          }}
-          onRemoteStream={() => {
-            setCallStatus('Connected');
-            stopRinging();
-            stopHeartbeat();
-          }}
-          onCallEnd={() => {
-            setIsCallInProgress(false);
-            stopRinging();
-            stopHeartbeat();
-            navigation.goBack();
-          }}
-        />
-      )}
       <View style={styles.content}>
         <View style={styles.userInfo}>
           <View style={[styles.avatarPlaceholder, { backgroundColor: theme.tint }]}>

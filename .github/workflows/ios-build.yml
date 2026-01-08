@@ -25,7 +25,7 @@ jobs:
           cd ios
           xcodebuild -workspace *.xcworkspace \
             -scheme "$(ls -d *.xcodeproj | cut -d. -f1)" \
-            -configuration Release \
+            -configuration Debug \
             -sdk iphoneos \
             -archivePath $PWD/build/App.xcarchive \
             -jobs 10 \

@@ -9,6 +9,9 @@ dist/
 web-build/
 expo-env.d.ts
 
+# Credentials
+hltnotify-firebase-adminsdk-*.json
+
 # Native
 .kotlin/
 *.orig.*

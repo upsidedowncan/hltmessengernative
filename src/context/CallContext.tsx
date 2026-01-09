@@ -25,18 +25,23 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     if (flagsLoading) return;
 
+    console.log(`[CallContext] Checking setup. User: ${user?.id}, Supported: ${callService.isSupported()}, Enabled: ${isEnabled('ENABLE_CALLING')}`);
+
     if (user && callService.isSupported() && isEnabled('ENABLE_CALLING')) {
+      console.log(`[CallContext] Setting up call service for user ${user.id}`);
       callService.setup(user.id);
       
       const handleIncomingSignal = (message: SignalingMessage) => {
         console.log('Incoming signal:', message.type, 'from:', message.senderId);
         if (message.type === 'offer' && !isCallInProgress) {
           setIsCallInProgress(true);
+          const isVideoCall = message.data?.isVideo || false;
           // Navigate to CallScreen for incoming call
           navigation.navigate('Call', {
             friendId: message.senderId,
             friendName: message.senderName || 'Unknown',
             isIncoming: true,
+            isVideo: isVideoCall,
           });
         }
       };

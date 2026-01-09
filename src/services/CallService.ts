@@ -24,6 +24,7 @@ class CallService {
   private friendId: string | null = null;
 
   private onRemoteStreamCallback: ((stream: any) => void) | null = null;
+  private onLocalStreamCallback: ((stream: any) => void) | null = null;
   private onCallEndCallback: (() => void) | null = null;
   private messageHandler: ((message: SignalingMessage) => void) | null = null;
   private pendingOffer: any = null;
@@ -49,16 +50,23 @@ class CallService {
     await signalingService.subscribe(userId, this.messageHandler);
   }
 
-  setCallbacks(onRemoteStream: (stream: any) => void, onCallEnd: () => void) {
+  setCallbacks(onRemoteStream: (stream: any) => void, onCallEnd: () => void, onLocalStream?: (stream: any) => void) {
     this.onRemoteStreamCallback = onRemoteStream;
     this.onCallEndCallback = onCallEnd;
+    if (onLocalStream) {
+        this.onLocalStreamCallback = onLocalStream;
+    }
   }
 
   private async handleSignalingMessage(message: SignalingMessage) {
     switch (message.type) {
       case 'offer':
-        this.friendId = message.senderId;
-        this.pendingOffer = message.data;
+        if (this.pc) {
+          await this.handleRenegotiationOffer(message.data);
+        } else {
+          this.friendId = message.senderId;
+          this.pendingOffer = message.data;
+        }
         break;
       case 'answer':
         await this.handleAnswer(message.data);
@@ -70,6 +78,40 @@ class CallService {
       case 'reject':
         this.endCall(false);
         break;
+    }
+  }
+
+  private async handleRenegotiationOffer(data: any) {
+    if (!this.pc || !this.isSupported()) return;
+
+    const offerDescription = data.offer;
+    await this.pc.setRemoteDescription(new RTCSessionDescription(offerDescription));
+    
+    const answer = await this.pc.createAnswer();
+    await this.pc.setLocalDescription(answer);
+
+    await signalingService.sendSignal(this.friendId!, {
+      type: 'answer',
+      senderId: this.userId!,
+      data: answer,
+    });
+  }
+
+  private async renegotiate() {
+    if (!this.pc || !this.friendId) return;
+
+    console.log('[CallService] Renegotiating...');
+    try {
+      const offer = await this.pc.createOffer({ iceRestart: true });
+      await this.pc.setLocalDescription(offer);
+
+      await signalingService.sendSignal(this.friendId, {
+        type: 'offer',
+        senderId: this.userId!,
+        data: { offer, isVideo: true },
+      });
+    } catch (e) {
+      console.error('[CallService] Renegotiation failed', e);
     }
   }
 
@@ -105,14 +147,23 @@ class CallService {
     }
   }
 
-  async startCall(friendId: string, senderName: string) {
+  async startCall(friendId: string, senderName: string, isVideo: boolean = false) {
     if (!this.isSupported()) return;
     this.friendId = friendId;
     
     this.localStream = await mediaDevices.getUserMedia({
       audio: true,
-      video: false,
+      video: isVideo ? {
+        width: 1280,
+        height: 720,
+        frameRate: 30,
+        facingMode: 'user',
+      } : false,
     });
+
+    if (this.onLocalStreamCallback) {
+      this.onLocalStreamCallback(this.localStream);
+    }
 
     await this.createPeerConnection();
 
@@ -123,21 +174,32 @@ class CallService {
       type: 'offer',
       senderId: this.userId!,
       senderName,
-      data: offer,
+      data: { offer, isVideo },
     });
   }
 
-  async acceptCall() {
+  async acceptCall(isVideo: boolean = false) {
     if (!this.isSupported() || !this.pendingOffer || !this.friendId) return;
 
     this.localStream = await mediaDevices.getUserMedia({
       audio: true,
-      video: false,
+      video: isVideo ? {
+        width: 1280,
+        height: 720,
+        frameRate: 30,
+        facingMode: 'user',
+      } : false,
     });
+
+    if (this.onLocalStreamCallback) {
+      this.onLocalStreamCallback(this.localStream);
+    }
 
     await this.createPeerConnection();
 
-    await this.pc!.setRemoteDescription(new RTCSessionDescription(this.pendingOffer));
+    const offerDescription = this.pendingOffer.offer || this.pendingOffer;
+
+    await this.pc!.setRemoteDescription(new RTCSessionDescription(offerDescription));
     this.isRemoteDescriptionSet = true;
     await this.processPendingCandidates();
 
@@ -151,6 +213,64 @@ class CallService {
     });
 
     this.pendingOffer = null;
+  }
+
+  async toggleVideo(enabled: boolean) {
+    if (!this.localStream) return;
+
+    const videoTracks = this.localStream.getVideoTracks();
+
+    if (videoTracks.length > 0) {
+      videoTracks.forEach((track: any) => {
+        track.enabled = enabled;
+      });
+    } else if (enabled) {
+      try {
+        const streamWithVideo = await mediaDevices.getUserMedia({
+          audio: false,
+          video: {
+            width: 1280,
+            height: 720,
+            frameRate: 30,
+            facingMode: 'user',
+          },
+        });
+
+        const newVideoTrack = streamWithVideo.getVideoTracks()[0];
+        if (newVideoTrack) {
+          this.localStream.addTrack(newVideoTrack);
+          
+          if (this.onLocalStreamCallback) {
+            this.onLocalStreamCallback(this.localStream);
+          }
+
+          if (this.pc) {
+            this.pc.addTrack(newVideoTrack, this.localStream);
+            await this.renegotiate();
+          }
+        }
+      } catch (error) {
+        console.error('Error enabling video track:', error);
+      }
+    }
+  }
+
+  toggleAudio(enabled: boolean) {
+    if (this.localStream) {
+      this.localStream.getAudioTracks().forEach((track: any) => {
+        track.enabled = enabled;
+      });
+    }
+  }
+
+  switchCamera() {
+    if (this.localStream) {
+      this.localStream.getVideoTracks().forEach((track: any) => {
+        if (track._switchCamera) {
+          track._switchCamera();
+        }
+      });
+    }
   }
 
   private async handleAnswer(answer: any) {
@@ -207,7 +327,10 @@ class CallService {
       this.onCallEndCallback();
     }
   }
+
+  getLocalStream() {
+    return this.localStream;
+  }
 }
 
 export const callService = new CallService();
-

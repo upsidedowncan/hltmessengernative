@@ -113,13 +113,20 @@ export const Button: React.FC<ButtonProps> = ({
   };
 
   const isAndroid = Platform.OS === 'android';
-  const borderRadius = isTrainMode ? 0 : (isAndroid ? 4 : (size === 'small' ? 8 : 12));
+  const borderRadius = isTrainMode ? 0 : (isAndroid ? 24 : (size === 'small' ? 8 : 12));
   const activeTextColor = getTextColor();
   const backgroundColor = getBackgroundColor();
   
+  const animBorderRadius = useSharedValue(borderRadius);
+
+  React.useEffect(() => {
+    animBorderRadius.value = withTiming(borderRadius, { duration: 200 });
+  }, [borderRadius]);
+
   const animatedAndroidStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
     opacity: opacity.value,
+    borderRadius: animBorderRadius.value,
   }));
 
   const handlePressIn = () => {
@@ -128,6 +135,9 @@ export const Button: React.FC<ButtonProps> = ({
       scale.value = withTiming(isTrainMode ? 0.95 : 0.97, { duration: 100 });
       if (!isTrainMode) {
         opacity.value = withTiming(0.9, { duration: 100 });
+        if (isAndroid) {
+          animBorderRadius.value = withTiming(8, { duration: 200 });
+        }
       }
     }
   };
@@ -138,6 +148,9 @@ export const Button: React.FC<ButtonProps> = ({
       scale.value = withTiming(1, { duration: 100 });
       if (!isTrainMode) {
         opacity.value = withTiming(1, { duration: 100 });
+        if (isAndroid) {
+          animBorderRadius.value = withTiming(24, { duration: 200 });
+        }
       }
     }
   };
@@ -165,8 +178,8 @@ export const Button: React.FC<ButtonProps> = ({
               color: activeTextColor, 
               fontSize: getFontSize(),
               fontWeight: isTrainMode ? '300' : '600',
-              textTransform: isTrainMode ? 'lowercase' : (isAndroid ? 'uppercase' : 'none'),
-              letterSpacing: isAndroid ? 1 : 0,
+              textTransform: isTrainMode ? 'lowercase' : 'none',
+              letterSpacing: 0,
             },
             textStyle
           ]}>

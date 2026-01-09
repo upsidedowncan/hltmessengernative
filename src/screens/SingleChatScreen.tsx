@@ -9,6 +9,8 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  useColorScheme,
+  Image as RNImage,
   ScrollView,
   LayoutAnimation,
   UIManager,
@@ -18,6 +20,7 @@ import { useRoute, RouteProp, useNavigation } from '@react-navigation/native';
 import { MainStackParamList } from '../navigation/MainNavigator';
 import { supabase } from '../services/supabase';
 import { useAuth } from '../context/AuthContext';
+import { Colors } from '../constants/Colors';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Image } from 'expo-image';
@@ -45,10 +48,12 @@ import Animated, {
   interpolate,
   runOnJS,
 } from 'react-native-reanimated';
-import { Button, TextField, Tile, AppBar, Puller, PullerRef } from '../components';
+import { AppBar } from '../components/AppBar';
+import { useSendNotification } from '../hooks/useSendNotification';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
+// Enable LayoutAnimation on Android
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
@@ -60,7 +65,7 @@ type Attachment = {
   url: string;
   name?: string;
   size?: number;
-  duration?: number;
+  duration?: number; // Add duration for audio
 };
 
 type Message = {
@@ -78,12 +83,12 @@ export const SingleChatScreen = () => {
   const route = useRoute<SingleChatScreenRouteProp>();
   const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
   const { friendId, friendName } = route.params;
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const { theme, isDarkMode } = useAppTheme();
+  const { sendNotification } = useSendNotification();
   const { isEnabled } = useFeatureFlags();
   const { setIsCallInProgress } = useCall() as any;
   const insets = useSafeAreaInsets();
-  const pullerRef = useRef<PullerRef>(null);
   
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
@@ -136,7 +141,8 @@ export const SingleChatScreen = () => {
       'keyboardDidShow',
       () => {
         if (isAttachmentOpen) {
-           pullerRef.current?.collapse();
+           LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+           setIsAttachmentOpen(false);
         }
       }
     );
@@ -156,8 +162,6 @@ export const SingleChatScreen = () => {
       if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
     };
   }, []);
-
-  const nativeEnabled = isEnabled('ENABLE_CALLING') && callService.isSupported();
 
   const loadCachedMessages = async () => {
     try {
@@ -318,10 +322,18 @@ export const SingleChatScreen = () => {
       const { error } = await supabase.rpc('rpc_send_message', {
         p_sender_id: user.id,
         p_receiver_id: friendId,
-        p_content: optimisticMsg.content,
-        p_attachments: optimisticMsg.attachments,
       });
       if (error) throw error;
+
+      // Trigger push notification
+      sendNotification({
+        userId: friendId,
+        title: profile?.full_name || 'New Message',
+        body: optimisticMsg.content || 'Sent an attachment',
+        screen: 'SingleChat',
+        params: { friendId: user.id, friendName: profile?.full_name || 'Friend' }
+      }).catch(err => console.error('Notification failed', err));
+
     } catch (error: any) {
       setMessages(prev => prev.filter(m => m.id !== optimisticMsg.id));
     } finally {
@@ -367,7 +379,8 @@ export const SingleChatScreen = () => {
 
   const handleAttach = () => {
     Keyboard.dismiss();
-    pullerRef.current?.toggle();
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setIsAttachmentOpen(prev => !prev);
   };
 
   const pickImage = async () => {
@@ -385,7 +398,7 @@ export const SingleChatScreen = () => {
     });
 
     if (!result.canceled) {
-      pullerRef.current?.collapse();
+      setIsAttachmentOpen(false);
       await uploadFile(result.assets[0].uri, 'image');
     }
   };
@@ -395,7 +408,7 @@ export const SingleChatScreen = () => {
     const result = await DocumentPicker.getDocumentAsync({ type: '*/*', copyToCacheDirectory: true });
     
     if (!result.canceled) {
-      pullerRef.current?.collapse();
+      setIsAttachmentOpen(false);
       await uploadFile(result.assets[0].uri, 'file', result.assets[0].name, result.assets[0].size);
     }
   };
@@ -425,6 +438,16 @@ export const SingleChatScreen = () => {
         p_attachments: atts,
       });
       if (error) throw error;
+
+      // Trigger push notification
+      sendNotification({
+        userId: friendId,
+        title: profile?.full_name || 'New Message',
+        body: atts[0].type === 'audio' ? '🎤 Voice message' : '📎 Attachment',
+        screen: 'SingleChat',
+        params: { friendId: user.id, friendName: profile?.full_name || 'Friend' }
+      }).catch(err => console.error('Notification failed', err));
+
     } catch (error: any) {
        console.error("Send failed", error);
        setMessages(prev => prev.filter(m => m.id !== optimisticMsg.id));
@@ -463,6 +486,7 @@ export const SingleChatScreen = () => {
           const { sound, status } = await recording.createNewLoadedSoundAsync();
           const duration = (status as any).durationMillis || 0;
           
+          // Simplified: upload directly without checking size via FileSystem
           const uploaded = await uploadFile(uri, 'audio', `Voice Message ${new Date().toLocaleTimeString()}`, 0, duration);
           if (uploaded) {
               await sendMessageWithAttachment([uploaded]);
@@ -846,23 +870,40 @@ export const SingleChatScreen = () => {
 
   const headerHeight = (Platform.OS === 'ios' ? 44 : 56) + insets.top;
 
+  const renderHeaderRight = () => {
+    const nativeEnabled = isEnabled('ENABLE_CALLING') && callService.isSupported();
+    
+    if (!nativeEnabled) return null;
+
+    return (
+      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+        <TouchableOpacity 
+          onPress={() => {
+            setIsCallInProgress(true);
+            navigation.navigate('Call', { friendId, friendName, isIncoming: false, isVideo: false });
+          }}
+          style={{ marginRight: 15 }}
+        >
+          <Ionicons name="call-outline" size={24} color={theme.tint} />
+        </TouchableOpacity>
+        <TouchableOpacity 
+          onPress={() => {
+            setIsCallInProgress(true);
+            navigation.navigate('Call', { friendId, friendName, isIncoming: false, isVideo: true });
+          }}
+          style={{ marginRight: 10 }}
+        >
+          <Ionicons name="videocam-outline" size={26} color={theme.tint} />
+        </TouchableOpacity>
+      </View>
+    );
+  };
+
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       <AppBar 
         centerComponent={renderHeaderTitle()}
-        rightComponent={
-          (nativeEnabled) ? (
-            <TouchableOpacity 
-              onPress={() => {
-                setIsCallInProgress(true);
-                navigation.navigate('Call', { friendId, friendName, isIncoming: false });
-              }}
-              style={{ marginRight: 8 }}
-            >
-              <Ionicons name="call-outline" size={24} color={theme.tint} />
-            </TouchableOpacity>
-          ) : undefined
-        }
+        rightComponent={renderHeaderRight()}
       />
       <KeyboardAvoidingView 
           style={{ flex: 1 }}
@@ -902,85 +943,79 @@ export const SingleChatScreen = () => {
           onEndReachedThreshold={0.5}
         />
 
-        <Puller 
-          ref={pullerRef}
-          onStateChange={setIsAttachmentOpen}
-          baseContent={
-            <View style={{ backgroundColor: theme.background }}>
-              {attachments.length > 0 && (
-                  <ScrollView horizontal style={styles.previewContainer} showsHorizontalScrollIndicator={false}>
-                      {attachments.map((att, i) => (
-                          <View key={i} style={styles.previewItem}>
-                              {att.type === 'image' ? (
-                                  <Image source={{ uri: att.url }} style={{ width: 60, height: 60, borderRadius: 8 }} />
-                              ) : (
-                                  <View style={[styles.filePreview, { borderColor: theme.border }]}>
-                                      <Ionicons name="document" size={24} color={theme.text} />
-                                  </View>
-                              )}
-                              <TouchableOpacity onPress={() => setAttachments(prev => prev.filter((_, idx) => idx !== i))} style={styles.removeAttachment}>
-                                  <Ionicons name="close-circle" size={20} color={theme.text} />
-                              </TouchableOpacity>
-                          </View>
-                      ))}
-                  </ScrollView>
-              )}
+        <View style={[styles.inputWrapper, { backgroundColor: theme.background, borderTopColor: theme.border, paddingBottom: Math.max(insets.bottom, 6) }]}>
+          {attachments.length > 0 && (
+              <ScrollView horizontal style={styles.previewContainer} showsHorizontalScrollIndicator={false}>
+                  {attachments.map((att, i) => (
+                      <View key={i} style={styles.previewItem}>
+                          {att.type === 'image' ? (
+                               <RNImage source={{ uri: att.url }} style={{ width: 60, height: 60, borderRadius: 8 }} />
+                          ) : (
+                               <View style={[styles.filePreview, { borderColor: theme.border }]}>
+                                   <Ionicons name="document" size={24} color={theme.text} />
+                               </View>
+                          )}
+                          <TouchableOpacity onPress={() => setAttachments(prev => prev.filter((_, idx) => idx !== i))} style={styles.removeAttachment}>
+                              <Ionicons name="close-circle" size={20} color={theme.text} />
+                          </TouchableOpacity>
+                      </View>
+                  ))}
+              </ScrollView>
+          )}
 
-              <View style={[styles.innerContainer, { paddingVertical: 8, alignItems: 'center' }]}>
-                  <TouchableOpacity onPress={handleAttach} style={styles.iconButton}>
-                      <Ionicons name={isAttachmentOpen ? "close" : "add"} size={32} color={theme.tint} />
+          <View style={styles.innerContainer}>
+              <TouchableOpacity onPress={handleAttach} style={styles.iconButton}>
+                  <Ionicons name={isAttachmentOpen ? "close" : "add"} size={32} color={theme.tint} />
+              </TouchableOpacity>
+              
+              <TextInput 
+                  style={[
+                      styles.input, 
+                      { 
+                          backgroundColor: isDarkMode ? '#1c1c1e' : '#fff',
+                          color: theme.text,
+                      }
+                  ]} 
+                  placeholder="Message" 
+                  placeholderTextColor={theme.tabIconDefault} 
+                  value={inputText} 
+                  onChangeText={setInputText} 
+                  multiline 
+                  selectionColor={theme.tint}
+              />
+              
+              {(inputText.trim().length > 0 || attachments.length > 0) ? (
+                  <TouchableOpacity onPress={handleSend} disabled={sending} style={[styles.sendButton, { backgroundColor: theme.tint }]}>
+                      {sending ? <ActivityIndicator size="small" color="#fff" /> : <Ionicons name="arrow-up" size={20} color="#fff" />}
                   </TouchableOpacity>
-                  
-                  <TextInput 
-                      style={[
-                          styles.input, 
-                          { 
-                              backgroundColor: isDarkMode ? '#1c1c1e' : '#fff',
-                              color: theme.text,
-                              paddingVertical: Platform.OS === 'ios' ? 10 : 8,
-                          }
-                      ]} 
-                      placeholder="Message" 
-                      placeholderTextColor={theme.tabIconDefault} 
-                      value={inputText} 
-                      onChangeText={setInputText} 
-                      multiline 
-                      selectionColor={theme.tint}
-                  />
-                  
-                  {(inputText.trim().length > 0 || attachments.length > 0) ? (
-                      <TouchableOpacity onPress={handleSend} disabled={sending} style={[styles.sendButton, { backgroundColor: theme.tint }]}>
-                          {sending ? <ActivityIndicator size="small" color="#fff" /> : <Ionicons name="arrow-up" size={20} color="#fff" />}
-                      </TouchableOpacity>
-                  ) : (
-                      <TouchableOpacity 
-                        onPressIn={startRecording} 
-                        onPressOut={stopAndSendRecording}
-                        style={[styles.sendButton, { backgroundColor: isRecording ? '#FF3B30' : theme.tabIconDefault }]}
-                      >
-                        <Ionicons name="mic" size={20} color="#fff" />
-                      </TouchableOpacity>
-                  )}
+              ) : (
+                  <TouchableOpacity 
+                    onPressIn={startRecording} 
+                    onPressOut={stopAndSendRecording}
+                    style={[styles.sendButton, { backgroundColor: isRecording ? '#FF3B30' : theme.tabIconDefault }]}
+                  >
+                    <Ionicons name="mic" size={20} color="#fff" />
+                  </TouchableOpacity>
+              )}
+          </View>
+          
+          {isAttachmentOpen && (
+              <View style={[styles.attachmentMenu, { borderTopColor: theme.border }]}>
+                  <TouchableOpacity style={styles.attachmentOption} onPress={pickImage}>
+                      <View style={[styles.optionIcon, { backgroundColor: '#007AFF' }]}>
+                          <Ionicons name="image" size={24} color="#fff" />
+                      </View>
+                      <Text style={[styles.optionText, { color: theme.text }]}>Photos</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.attachmentOption} onPress={pickDocument}>
+                      <View style={[styles.optionIcon, { backgroundColor: '#5856D6' }]}>
+                          <Ionicons name="document-text" size={24} color="#fff" />
+                      </View>
+                      <Text style={[styles.optionText, { color: theme.text }]}>Document</Text>
+                  </TouchableOpacity>
               </View>
-            </View>
-          }
-          expandedContent={
-            <View style={[styles.attachmentMenu, { borderTopColor: theme.border }]}>
-                <TouchableOpacity style={styles.attachmentOption} onPress={pickImage}>
-                    <View style={[styles.optionIcon, { backgroundColor: '#007AFF' }]}>
-                        <Ionicons name="image" size={24} color="#fff" />
-                    </View>
-                    <Text style={[styles.optionText, { color: theme.text }]}>Photos</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.attachmentOption} onPress={pickDocument}>
-                    <View style={[styles.optionIcon, { backgroundColor: '#5856D6' }]}>
-                        <Ionicons name="document-text" size={24} color="#fff" />
-                    </View>
-                    <Text style={[styles.optionText, { color: theme.text }]}>Document</Text>
-                </TouchableOpacity>
-            </View>
-          }
-        />
+          )}
+        </View>
       </KeyboardAvoidingView>
 
       <ImageView
@@ -1052,16 +1087,15 @@ const styles = StyleSheet.create({
   },
   innerContainer: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-end',
     gap: 8,
-    paddingHorizontal: 8,
   },
   iconButton: {
     width: 40,
     height: 40,
     justifyContent: 'center',
     alignItems: 'center',
-    borderRadius: 20, 
+    borderRadius: 20, // Optional: for touch feedback
   },
   input: {
     flex: 1,

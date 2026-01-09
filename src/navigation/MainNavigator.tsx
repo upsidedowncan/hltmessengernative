@@ -19,6 +19,7 @@ export type MainStackParamList = {
     friendId: string;
     friendName: string;
     isIncoming: boolean;
+    isVideo?: boolean;
   };
   DevSettings: undefined;
   ComponentTest: undefined;

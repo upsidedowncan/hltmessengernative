@@ -15,6 +15,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 const RootNavigator = () => {
   const { session, loading, profile } = useAuth();
   const { theme } = useAppTheme();
+  useDeepLinkHandler(); // Handle incoming notifications/deep links
 
   if (loading) {
     return (
@@ -33,6 +34,8 @@ const RootNavigator = () => {
 
   return <AuthNavigator />;
 };
+
+import { useDeepLinkHandler } from './src/hooks/useDeepLinkHandler';
 
 const AppContent = () => {
   const { isDarkMode } = useAppTheme();

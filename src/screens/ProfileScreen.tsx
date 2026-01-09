@@ -15,6 +15,7 @@ import { supabase } from '../services/supabase';
 import { MainStackParamList } from '../navigation/MainNavigator';
 import { useAppTheme } from '../context/FeatureFlagContext';
 import { Button, TextField, Tile } from '../components';
+import { NotificationSetup } from '../components/NotificationSetup';
 
 export const ProfileScreen = () => {
   const { user, profile, refreshProfile, signOut } = useAuth();
@@ -121,6 +122,8 @@ export const ProfileScreen = () => {
           />
 
           <View style={[styles.separator, { backgroundColor: theme.border }]} />
+
+          <NotificationSetup />
 
           <Button 
             title="Sign Out" 

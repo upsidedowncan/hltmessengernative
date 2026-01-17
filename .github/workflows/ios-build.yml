@@ -1,5 +1,5 @@
 name: Build iOS (Unsigned)
-on: workflow_dispatch # Adds a "Run Workflow" button in GitHub UI
+on: workflow_dispatch
 
 jobs:
   build:
@@ -17,22 +17,29 @@ jobs:
       - name: Install Dependencies
         run: npm ci --legacy-peer-deps
 
-      # 1. Generate the native code BUT do not install Pods yet (--no-install)
+      # 1. Run Prebuild to generate the ios/ folder
       - name: Prebuild (Generate Native iOS Code)
         run: npx expo prebuild --platform ios --clean --no-install
 
-      # 2. Force Edit the Podfile to require iOS 16.0
-      #    This fixes the "cannot find type" Swift errors.
-      - name: Patch Podfile for iOS 16.0
+      # 2. THE FIX: Patch both the Podfile AND the Properties JSON
+      #    This prevents the post_install hook from downgrading the version.
+      - name: Patch iOS Version to 16.0
         run: |
-          echo "Updating Podfile platform version..."
-          # Just update the platform line. This is safe and sufficient.
+          echo "Patching Podfile..."
           sed -i '' "s/platform :ios, .*/platform :ios, '16.0'/g" ios/Podfile
           
-          # Verify the change
-          head -n 5 ios/Podfile
+          echo "Patching Podfile.properties.json..."
+          # This file controls the version injected into every Pod. 
+          # We replace any occurrence of 15.1 with 16.0 here.
+          if [ -f "ios/Podfile.properties.json" ]; then
+            sed -i '' 's/15\.1/16.0/g' ios/Podfile.properties.json
+            echo "Updated Podfile.properties.json:"
+            cat ios/Podfile.properties.json
+          else
+            echo "Warning: Podfile.properties.json not found."
+          fi
 
-      # 3. Now install the Pods with the correct version set
+      # 3. Install Pods (Now they will respect the 16.0 setting)
       - name: Install CocoaPods
         run: |
           cd ios
@@ -59,9 +66,7 @@ jobs:
         run: |
           cd ios
           mkdir -p Payload
-          # Move the .app into the Payload folder
           mv build/App.xcarchive/Products/Applications/*.app Payload/
-          # Zip it up into an IPA
           zip -r app-release.ipa Payload
 
       - name: Upload IPA

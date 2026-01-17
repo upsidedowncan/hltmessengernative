@@ -17,25 +17,25 @@ jobs:
       - name: Install Dependencies
         run: npm ci --legacy-peer-deps
 
-      # 1. Run Prebuild to generate the native files (defaults to 15.1 due to old plugin)
+      # 1. Run Prebuild to generate the ios/ folder and the Podfile.properties.json
       - name: Prebuild (Generate Native iOS Code)
         run: npx expo prebuild --platform ios --clean --no-install
 
-      # 2. THE CRITICAL FIX: Patch the hidden JSON file that overrides the Podfile
-      - name: Force iOS 16.0 Everywhere
+      # 2. THE FIX: Patch the JSON file that Expo uses to control versioning
+      #    We replace "15.1" with "16.0" in the generated properties file.
+      - name: Force iOS 16.0 in Build Properties
         run: |
-          echo "Patching Podfile platform..."
-          sed -i '' "s/platform :ios, .*/platform :ios, '16.0'/g" ios/Podfile
-          
-          echo "Patching Podfile.properties.json (The hidden override)..."
-          # This replaces "15.1" with "16.0" in the properties file Expo generates
+          echo "Patching Podfile.properties.json..."
+          # This specifically targets the JSON file that overrides the build settings
           sed -i '' 's/15\.1/16.0/g' ios/Podfile.properties.json
           
-          echo "Verifying changes:"
-          grep "16.0" ios/Podfile
-          grep "16.0" ios/Podfile.properties.json
+          # Also patch the Podfile platform line just to be safe
+          sed -i '' "s/platform :ios, .*/platform :ios, '16.0'/g" ios/Podfile
 
-      # 3. Install Pods (Now they will actually respect 16.0)
+          # Print it to verify it changed
+          cat ios/Podfile.properties.json
+
+      # 3. Install Pods (Now they will read the 16.0 from the JSON file)
       - name: Install CocoaPods
         run: |
           cd ios
@@ -53,7 +53,7 @@ jobs:
             -quiet \
             clean archive \
             CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGN_REQUIRED=NO \
+            CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY="" \
             PROVISIONING_PROFILE="" \
             ENABLE_USER_SCRIPT_SANDBOXING=NO

@@ -21,15 +21,25 @@ jobs:
       - name: Prebuild (Generate Native iOS Code)
         run: npx expo prebuild --platform ios --clean --no-install
 
-      # 2. Force Edit the Podfile to require iOS 15.1
+      # 2. Force Edit the Podfile to require iOS 16.0
       #    This fixes the "cannot find type" Swift errors.
-      - name: Patch Podfile for iOS 15.1
+      - name: Patch Podfile for iOS 16.0
         run: |
           echo "Updating Podfile platform version..."
-          # sed -i '' is required for macOS sed to edit in-place
-          sed -i '' "s/platform :ios, .*/platform :ios, '15.1'/g" ios/Podfile
+          # Change 9.0 (or whatever default) to 16.0
+          sed -i '' "s/platform :ios, .*/platform :ios, '16.0'/g" ios/Podfile
           
-          # Verify the change by printing the first 5 lines
+          # Optional: Force Pods to 16.0 to remove warnings
+          cat <<EOT >> ios/Podfile
+          post_install do |installer|
+            installer.pods_project.targets.each do |target|
+              target.build_configurations.each do |config|
+                config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '16.0'
+              end
+            end
+          end
+          EOT
+          
           head -n 5 ios/Podfile
 
       # 3. Now install the Pods with the correct version set

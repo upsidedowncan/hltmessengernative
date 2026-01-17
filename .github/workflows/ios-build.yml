@@ -17,8 +17,26 @@ jobs:
       - name: Install Dependencies
         run: npm ci --legacy-peer-deps
 
+      # 1. Generate the native code BUT do not install Pods yet (--no-install)
       - name: Prebuild (Generate Native iOS Code)
-        run: npx expo prebuild --platform ios --clean
+        run: npx expo prebuild --platform ios --clean --no-install
+
+      # 2. Force Edit the Podfile to require iOS 15.1
+      #    This fixes the "cannot find type" Swift errors.
+      - name: Patch Podfile for iOS 15.1
+        run: |
+          echo "Updating Podfile platform version..."
+          # sed -i '' is required for macOS sed to edit in-place
+          sed -i '' "s/platform :ios, .*/platform :ios, '15.1'/g" ios/Podfile
+          
+          # Verify the change by printing the first 5 lines
+          head -n 5 ios/Podfile
+
+      # 3. Now install the Pods with the correct version set
+      - name: Install CocoaPods
+        run: |
+          cd ios
+          pod install --repo-update
 
       - name: Build Unsigned IPA
         run: |
@@ -51,4 +69,3 @@ jobs:
         with:
           name: Unsigned-Messenger-App
           path: ios/app-release.ipa
-

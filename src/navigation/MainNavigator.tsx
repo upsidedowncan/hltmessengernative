@@ -1,6 +1,9 @@
 import React from 'react';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { Platform } from 'react-native';
+import { createNativeBottomTabNavigator } from '@bottom-tabs/react-navigation';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+
+// Screen Imports
 import { ChatScreen } from '../screens/ChatScreen';
 import { FriendsScreen } from '../screens/FriendsScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
@@ -12,7 +15,6 @@ import { ComponentTestScreen } from '../screens/ComponentTestScreen';
 import { AIChatScreen } from '../screens/AIChatScreen';
 import { AIChatListScreen } from '../screens/AIChatListScreen';
 import { AISettingsScreen } from '../screens/AISettingsScreen';
-import { MaterialTabBar } from '../components/MaterialTabBar';
 import { useAppTheme } from '../context/FeatureFlagContext';
 
 export type MainStackParamList = {
@@ -33,7 +35,7 @@ export type MainTabParamList = {
   Profile: undefined;
 };
 
-const Tab = createBottomTabNavigator<MainTabParamList>();
+const Tab = createNativeBottomTabNavigator<MainTabParamList>();
 const Stack = createNativeStackNavigator<MainStackParamList>();
 
 const MainTabs = () => {
@@ -41,30 +43,52 @@ const MainTabs = () => {
   
   return (
     <Tab.Navigator
-      tabBar={(props) => <MaterialTabBar {...props} />}
+      // ✅ FIX: Color props must be inside screenOptions
       screenOptions={{
-        headerShown: false,
+        tabBarActiveTintColor: theme.tint
       }}
     >
       <Tab.Screen 
         name="Chats" 
         component={ChatScreen} 
-        options={{ tabBarLabel: 'Chats' }}
+        options={{ 
+          tabBarLabel: 'Chats',
+          tabBarIcon: ({ focused }) => ({
+            sfSymbol: focused ? 'bubble.left.and.bubble.right.fill' : 'bubble.left.and.bubble.right',
+            // ⚠️ Android Note: sfSymbol is iOS only. 
+            // For Android, add: source: require('../path/to/icon.png')
+          }),
+        }}
       />
       <Tab.Screen 
         name="Friends" 
         component={FriendsScreen} 
-        options={{ tabBarLabel: 'People' }}
+        options={{ 
+          tabBarLabel: 'People',
+          tabBarIcon: ({ focused }) => ({
+            sfSymbol: focused ? 'person.2.fill' : 'person.2',
+          }),
+        }}
       />
       <Tab.Screen 
         name="AI" 
         component={AIChatListScreen} 
-        options={{ tabBarLabel: 'AI' }}
+        options={{ 
+          tabBarLabel: 'AI',
+          tabBarIcon: ({ focused }) => ({
+            sfSymbol: focused ? 'sparkles' : 'sparkles',
+          }),
+        }}
       />
       <Tab.Screen 
         name="Profile" 
         component={ProfileScreen} 
-        options={{ tabBarLabel: 'Profile' }}
+        options={{ 
+          tabBarLabel: 'Profile',
+          tabBarIcon: ({ focused }) => ({
+            sfSymbol: focused ? 'person.crop.circle.fill' : 'person.crop.circle',
+          }),
+        }}
       />
     </Tab.Navigator>
   );

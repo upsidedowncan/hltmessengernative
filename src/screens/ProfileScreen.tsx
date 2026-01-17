@@ -15,7 +15,6 @@ import { supabase } from '../services/supabase';
 import { MainStackParamList } from '../navigation/MainNavigator';
 import { useAppTheme } from '../context/FeatureFlagContext';
 import { Button, TextField, Tile } from '../components';
-import { NotificationSetup } from '../components/NotificationSetup';
 
 export const ProfileScreen = () => {
   const { user, profile, refreshProfile, signOut } = useAuth();
@@ -123,34 +122,15 @@ export const ProfileScreen = () => {
 
           <View style={[styles.separator, { backgroundColor: theme.border }]} />
 
-          <NotificationSetup />
-
-          <Button 
-            title="Sign Out" 
-            onPress={signOut} 
-            type="outline"
-            color="#ef5350"
-            textColor="#ef5350"
-            icon="log-out-outline"
-          />
-
-          <Button 
-            title="Developer Settings" 
-            onPress={() => navigation.navigate('DevSettings')} 
-            type="ghost"
-            size="small"
-            style={{ marginTop: 10 }}
+          <Tile 
+            title="Settings" 
+            icon="cog-outline" 
+            onPress={() => navigation.navigate('Settings')} 
           />
 
           <View style={[styles.separator, { backgroundColor: theme.border }]} />
 
-          <Text style={[styles.label, { color: theme.text, marginTop: 10 }]}>LABS</Text>
-          <Tile 
-            title="Component Lab" 
-            subtitle="Test new UI elements" 
-            icon="beaker-outline" 
-            onPress={() => navigation.navigate('ComponentTest')} 
-          />
+          
         </View>
       </ScrollView>
     </KeyboardAvoidingView>

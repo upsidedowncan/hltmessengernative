@@ -15,31 +15,26 @@ import {
   LayoutAnimation,
   UIManager,
   Alert,
+  Modal,
+  Dimensions,
+  DeviceEventEmitter,
+  Keyboard,
 } from 'react-native';
 import { useRoute, RouteProp, useNavigation } from '@react-navigation/native';
-import { MainStackParamList } from '../navigation/MainNavigator';
-import { supabase } from '../services/supabase';
-import { useAuth } from '../context/AuthContext';
-import { Colors } from '../constants/Colors';
-import { Ionicons } from '@expo/vector-icons';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Image } from 'expo-image';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { Audio } from 'expo-av';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
-import { Keyboard } from 'react-native';
-import { Audio } from 'expo-av';
-import { useAppTheme, useFeatureFlags } from '../context/FeatureFlagContext';
-import { useCall } from '../context/CallContext';
-import { callService } from '../services/CallService';
-import ImageView from 'react-native-image-viewing';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import * as MediaLibrary from 'expo-media-library';
 import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
-import { Modal, Dimensions } from 'react-native';
+import ImageView from 'react-native-image-viewing';
+import InCallManager from 'react-native-incall-manager';
 import Animated, { 
   useSharedValue, 
   useAnimatedStyle, 
@@ -48,8 +43,17 @@ import Animated, {
   interpolate,
   runOnJS,
 } from 'react-native-reanimated';
+import { Ionicons } from '@expo/vector-icons';
+
+import { MainStackParamList } from '../navigation/MainNavigator';
+import { supabase } from '../services/supabase';
+import { useAuth } from '../context/AuthContext';
+import { useAppTheme, useFeatureFlags } from '../context/FeatureFlagContext';
+import { useCall } from '../context/CallContext';
+import { callService } from '../services/CallService';
 import { AppBar } from '../components/AppBar';
 import { useSendNotification } from '../hooks/useSendNotification';
+import { Colors } from '../constants/Colors';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -82,7 +86,7 @@ type Message = {
 export const SingleChatScreen = () => {
   const route = useRoute<SingleChatScreenRouteProp>();
   const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
-  const { friendId, friendName } = route.params;
+  const { friendId, friendName, friendAvatar } = route.params;
   const { user, profile } = useAuth();
   const { theme, isDarkMode } = useAppTheme();
   const { sendNotification } = useSendNotification();
@@ -120,6 +124,7 @@ export const SingleChatScreen = () => {
   const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
   const [isMenuClosing, setIsMenuClosing] = useState(false);
   const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
+  const [isNear, setIsNear] = useState(false);
 
   useEffect(() => {
     if (selectedMessage) {
@@ -156,12 +161,28 @@ export const SingleChatScreen = () => {
     fetchMessages(0);
     subscribeToMessages();
     markAsRead();
+
+    const proximityListener = DeviceEventEmitter.addListener('Proximity', (data) => {
+        setIsNear(data.isNear);
+    });
     
     return () => {
       if (subscriptionRef.current) supabase.removeChannel(subscriptionRef.current);
       if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
+      proximityListener.remove();
+      InCallManager.stop();
     };
   }, []);
+
+  useEffect(() => {
+    if (playingAudioId) {
+        if (isNear) {
+            InCallManager.setForceSpeakerphoneOn(false);
+        } else {
+            InCallManager.setForceSpeakerphoneOn(true);
+        }
+    }
+  }, [isNear, playingAudioId]);
 
   const loadCachedMessages = async () => {
     try {
@@ -322,6 +343,8 @@ export const SingleChatScreen = () => {
       const { error } = await supabase.rpc('rpc_send_message', {
         p_sender_id: user.id,
         p_receiver_id: friendId,
+        p_content: inputText,
+        p_attachments: attachments,
       });
       if (error) throw error;
 
@@ -456,6 +479,13 @@ export const SingleChatScreen = () => {
 
   const startRecording = async () => {
     try {
+      if (sound) {
+        await sound.unloadAsync();
+        setSound(null);
+        setPlayingAudioId(null);
+        InCallManager.stop();
+      }
+
       const permission = await Audio.requestPermissionsAsync();
       if (permission.status !== 'granted') return;
 
@@ -502,6 +532,7 @@ export const SingleChatScreen = () => {
       if (sound) {
         await sound.unloadAsync();
         setSound(null);
+        InCallManager.stop();
         if (playingAudioId === id) {
           setPlayingAudioId(null);
           return;
@@ -509,12 +540,15 @@ export const SingleChatScreen = () => {
       }
 
       await Audio.setAudioModeAsync({
-        allowsRecordingIOS: false,
+        allowsRecordingIOS: true,
         playsInSilentModeIOS: true,
         staysActiveInBackground: false,
         shouldDuckAndroid: true,
         playThroughEarpieceAndroid: false,
       });
+
+      InCallManager.start({ media: 'audio' });
+      InCallManager.setForceSpeakerphoneOn(true);
 
       const { sound: newSound } = await Audio.Sound.createAsync(
           { uri: url }, 
@@ -530,11 +564,13 @@ export const SingleChatScreen = () => {
               setPlayingAudioId(null);
               setSound(null);
               setPlaybackStatus(null);
+              InCallManager.stop();
             }
         }
       });
     } catch (error) {
       console.error('Failed to play audio', error);
+      InCallManager.stop();
     }
   };
 
@@ -880,7 +916,7 @@ export const SingleChatScreen = () => {
         <TouchableOpacity 
           onPress={() => {
             setIsCallInProgress(true);
-            navigation.navigate('Call', { friendId, friendName, isIncoming: false, isVideo: false });
+            navigation.navigate('Call', { friendId, friendName, friendAvatar, isIncoming: false, isVideo: false });
           }}
           style={{ marginRight: 15 }}
         >
@@ -889,7 +925,7 @@ export const SingleChatScreen = () => {
         <TouchableOpacity 
           onPress={() => {
             setIsCallInProgress(true);
-            navigation.navigate('Call', { friendId, friendName, isIncoming: false, isVideo: true });
+            navigation.navigate('Call', { friendId, friendName, friendAvatar, isIncoming: false, isVideo: true });
           }}
           style={{ marginRight: 10 }}
         >

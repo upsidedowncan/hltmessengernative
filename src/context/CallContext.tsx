@@ -40,6 +40,7 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
           navigation.navigate('Call', {
             friendId: message.senderId,
             friendName: message.senderName || 'Unknown',
+            friendAvatar: message.senderAvatar,
             isIncoming: true,
             isVideo: isVideoCall,
           });

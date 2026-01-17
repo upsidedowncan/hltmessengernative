@@ -41,47 +41,33 @@ export const Tile: React.FC<TileProps> = ({
   const isAndroid = Platform.OS === 'android';
 
   const getBorderRadii = () => {
-    if (isAndroid) return { borderRadius: 0 };
-    const radius = 10;
-    if (groupPosition === 'top') return { borderTopLeftRadius: radius, borderTopRightRadius: radius };
-    if (groupPosition === 'bottom') return { borderBottomLeftRadius: radius, borderBottomRightRadius: radius };
-    if (groupPosition === 'middle') return { borderRadius: 0 };
-    return { borderRadius: radius };
+    return { borderRadius: 0 };
   };
 
   const renderContent = (pressed?: boolean) => {
-    // iOS Highlight color: System Gray 4 equivalent
-    const iosHighlightColor = isDarkMode ? '#3A3A3C' : '#D1D1D6';
-    const backgroundColor = !isAndroid 
-      ? (pressed ? iosHighlightColor : theme.cardBackground) 
-      : 'transparent';
+    // Make background lighter when pressed, especially in dark mode
+    const highlightColor = isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.02)';
+    const backgroundColor = pressed ? highlightColor : theme.cardBackground;
 
     return (
       <View style={[
         styles.container,
-        !isAndroid && { backgroundColor },
-        !isAndroid && getBorderRadii(),
+        { backgroundColor },
+        getBorderRadii(),
         style
       ]}>
-        <View style={[styles.content, isAndroid ? styles.contentAndroid : styles.contentIOS]}>
+        <View style={styles.content}>
           {icon && (
             <View style={[
               styles.iconContainer,
-              isAndroid ? styles.iconContainerAndroid : styles.iconContainerIOS,
               { 
-                backgroundColor: iconBackgroundColor || 
-                  (destructive ? (isAndroid ? '#FAD2CF' : '#FF3B30') : 
-                  (isAndroid ? (isDarkMode ? '#3C4043' : '#F1F3F4') : '#8E8E93')) 
+                backgroundColor: 'transparent'
               }
             ]}>
               <Ionicons 
                 name={icon} 
-                size={isAndroid ? 22 : 20} 
-                color={isAndroid 
-                  ? (destructive ? '#D93025' : (iconBackgroundColor ? '#FFFFFF' : theme.tint)) 
-                  : "#FFFFFF"
-                } 
-                style={!isAndroid ? { marginTop: 0.5 } : null}
+                size={24} 
+                color={destructive ? '#ef5350' : theme.text}
               />
             </View>
           )}
@@ -90,40 +76,28 @@ export const Tile: React.FC<TileProps> = ({
             <Text 
               style={[
                 styles.title, 
-                isAndroid ? styles.titleAndroid : styles.titleIOS,
-                { color: destructive ? (isAndroid ? '#D93025' : '#FF3B30') : theme.text }
+                { color: destructive ? '#ef5350' : theme.text }
               ]}
               numberOfLines={1}
             >
               {title}
             </Text>
-            {subtitle && (
-              <Text 
-                style={[
-                  isAndroid ? styles.subtitleAndroid : styles.subtitleIOS, 
-                  { color: theme.tabIconDefault }
-                ]} 
-                numberOfLines={isAndroid ? 2 : 1}
-              >
-                {subtitle}
-              </Text>
-            )}
           </View>
 
           <View style={styles.rightContainer}>
             {rightElement}
-            {chevron && onPress && !rightElement && !isAndroid && (
+            {chevron && onPress && !rightElement && (
               <Ionicons name="chevron-forward" size={18} color="#C4C4C6" />
             )}
           </View>
         </View>
         
-        {!isAndroid && (groupPosition === 'top' || groupPosition === 'middle') && (
+        {(groupPosition === 'top' || groupPosition === 'middle') && (
           <View style={[
             styles.separator, 
             { 
               backgroundColor: pressed ? 'transparent' : theme.border, 
-              left: icon ? 56 : 16 
+              left: icon ? 60 : 16 
             }
           ]} />
         )}
@@ -135,8 +109,13 @@ export const Tile: React.FC<TileProps> = ({
     return (
       <Pressable 
         onPress={onPress}
-        style={style}
-        android_ripple={isAndroid ? { color: 'rgba(0, 0, 0, 0.08)' } : undefined}
+        style={({ pressed }) => [
+             style,
+             // Apply border radius to the pressable wrapper too so ripple is clipped (Android)
+             getBorderRadii(),
+             { overflow: 'hidden' } 
+        ]}
+        android_ripple={{ color: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)' }}
       >
         {({ pressed }) => renderContent(pressed)}
       </Pressable>
@@ -149,36 +128,23 @@ export const Tile: React.FC<TileProps> = ({
 const styles = StyleSheet.create({
   container: {
     width: '100%',
+    overflow: 'hidden', // Ensure children don't bleed out of rounded corners
   },
   content: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-  },
-  contentIOS: {
-    minHeight: 44,
-    paddingVertical: 10,
-  },
-  contentAndroid: {
-    minHeight: 72,
+    paddingHorizontal: 24,
+    minHeight: 52,
     paddingVertical: 12,
   },
   iconContainer: {
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',
-  },
-  iconContainerIOS: {
-    width: 28,
-    height: 28,
-    borderRadius: 6,
+    width: 32,
+    height: 32,
+    borderRadius: 8,
     marginRight: 12,
-  },
-  iconContainerAndroid: {
-    width: 40,
-    height: 40,
-    borderRadius: 20, 
-    marginRight: 16,
   },
   textContainer: {
     flex: 1,
@@ -186,20 +152,11 @@ const styles = StyleSheet.create({
   },
   title: {
     fontWeight: '400',
-  },
-  titleIOS: {
     fontSize: 17,
   },
-  titleAndroid: {
-    fontSize: 16,
-    marginBottom: 1,
-  },
-  subtitleIOS: {
-    display: 'none',
-  },
-  subtitleAndroid: {
+  subtitle: {
     fontSize: 14,
-    lineHeight: 20,
+    marginTop: 2,
   },
   rightContainer: {
     flexDirection: 'row',

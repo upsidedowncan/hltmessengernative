@@ -5,6 +5,7 @@ export type SignalingMessage = {
   type: 'offer' | 'answer' | 'ice-candidate' | 'hangup' | 'reject' | 'incoming-call' | 'peer-ready';
   senderId: string;
   senderName?: string;
+  senderAvatar?: string;
   receiverId: string;
   data?: any;
 };

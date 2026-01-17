@@ -1,8 +1,5 @@
 import React from 'react';
-import {
-  Platform,
-  Switch as RNSwitch,
-} from 'react-native';
+import { Switch as PaperSwitch } from 'react-native-paper';
 import { useAppTheme } from '../context/FeatureFlagContext';
 
 interface SwitchProps {
@@ -12,25 +9,20 @@ interface SwitchProps {
 }
 
 /**
- * Switch component using the native React Native Switch.
+ * Switch component using react-native-paper Switch.
  */
 export const Switch: React.FC<SwitchProps> = ({ 
   value, 
   onValueChange, 
   disabled = false,
 }) => {
-  const { theme, isDarkMode } = useAppTheme();
+  const { theme } = useAppTheme();
 
   return (
-    <RNSwitch
+    <PaperSwitch
       value={value}
       onValueChange={onValueChange}
-      trackColor={{ 
-        false: isDarkMode ? '#3C4043' : '#BDC1C6', 
-        true: theme.tint 
-      }}
-      thumbColor={Platform.OS === 'ios' ? '#FFFFFF' : (value ? theme.tint : '#f4f3f4')}
-      ios_backgroundColor={isDarkMode ? '#3C4043' : '#BDC1C6'}
+      color={theme.tint}
       disabled={disabled}
     />
   );

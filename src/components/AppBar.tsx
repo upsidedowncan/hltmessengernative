@@ -1,14 +1,7 @@
 import React, { useLayoutEffect } from 'react';
-import {
-  View,
-  Platform,
-  TextStyle,
-  TouchableOpacity,
-  StyleSheet,
-  Text,
-} from 'react-native';
+import { View, Platform, TextStyle, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { Ionicons } from '@expo/vector-icons';
+import { Appbar } from 'react-native-paper';
 import { useAppTheme } from '../context/FeatureFlagContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -118,77 +111,28 @@ export const AppBar: React.FC<AppBarProps> = ({
   if (isNative) return null;
 
   return (
-    <View style={[
-      styles.customHeader, 
-      { 
-        backgroundColor: backgroundColor || theme.background,
-        paddingTop: insets.top,
-        borderBottomWidth: showBorder ? StyleSheet.hairlineWidth : 0,
-        borderBottomColor: theme.border
-      }
-    ]}>
-      <View style={styles.headerContent}>
-         <View style={styles.leftAction}>
-            {showBackButton && (
-              <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                 <Ionicons 
-                    name={Platform.OS === 'ios' ? "chevron-back" : "arrow-back"} 
-                    size={28} 
-                    color={activeTintColor} 
-                 />
-              </TouchableOpacity>
-            )}
-            {leftComponent}
-         </View>
-         
-         <View style={styles.centerAction}>
-            {centerComponent || (
-              <Text style={[styles.titleText, { color: theme.text }, titleStyle]}>
-                {title}
-              </Text>
-            )}
-         </View>
-         
-         <View style={styles.rightAction}>
-            {rightComponent}
-         </View>
-      </View>
-    </View>
+    <Appbar.Header
+      mode={largeTitle ? 'large' : 'center-aligned'}
+      elevated={showBorder}
+      style={{ backgroundColor: backgroundColor || theme.background }}
+    >
+      {showBackButton && <Appbar.BackAction onPress={() => navigation.goBack()} color={activeTintColor} />}
+      {leftComponent}
+      
+      <Appbar.Content 
+        title={centerComponent || title} 
+        titleStyle={[{ color: theme.text }, titleStyle]}
+        color={theme.text}
+      />
+
+      {rightComponent}
+    </Appbar.Header>
   );
 };
 
 const styles = StyleSheet.create({
-  leftAction: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  centerAction: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: -1,
-  },
   rightAction: {
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  backButton: {
-    padding: 8,
-  },
-  customHeader: {
-    width: '100%',
-  },
-  headerContent: {
-    height: Platform.OS === 'ios' ? 44 : 56,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 8,
-  },
-  titleText: {
-    fontSize: 17,
-    fontWeight: '600',
   },
 });

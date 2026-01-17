@@ -31,6 +31,10 @@ class CallService {
   private pendingCandidates: any[] = [];
   private isRemoteDescriptionSet = false;
 
+  // Volume Monitoring
+  private volumeInterval: NodeJS.Timeout | null = null;
+  private onVolumeChangeCallback: ((volume: number) => void) | null = null;
+
   private configuration = {
     iceServers: [
       { urls: 'stun:stun.l.google.com:19302' },
@@ -50,13 +54,59 @@ class CallService {
     await signalingService.subscribe(userId, this.messageHandler);
   }
 
-  setCallbacks(onRemoteStream: (stream: any) => void, onCallEnd: () => void, onLocalStream?: (stream: any) => void) {
+  setCallbacks(
+      onRemoteStream: (stream: any) => void, 
+      onCallEnd: () => void, 
+      onLocalStream?: (stream: any) => void
+  ) {
     this.onRemoteStreamCallback = onRemoteStream;
     this.onCallEndCallback = onCallEnd;
     if (onLocalStream) {
         this.onLocalStreamCallback = onLocalStream;
     }
   }
+
+  // --- Volume Monitoring ---
+  startVolumeMonitoring(callback: (volume: number) => void) {
+      if (this.volumeInterval) clearInterval(this.volumeInterval);
+      this.onVolumeChangeCallback = callback;
+      
+      this.volumeInterval = setInterval(async () => {
+          if (this.pc) {
+              try {
+                  const stats = await this.pc.getStats();
+                  let maxAudioLevel = 0;
+                  
+                  stats.forEach((report: any) => {
+                      // inbound-rtp for remote audio
+                      if (report.type === 'inbound-rtp' && report.kind === 'audio') {
+                          // Standard spec property: audioLevel (0.0 to 1.0)
+                          if (typeof report.audioLevel === 'number') {
+                              if (report.audioLevel > maxAudioLevel) {
+                                  maxAudioLevel = report.audioLevel;
+                              }
+                          }
+                      }
+                  });
+                  
+                  if (this.onVolumeChangeCallback) {
+                      this.onVolumeChangeCallback(maxAudioLevel);
+                  }
+              } catch (e) {
+                  // Ignore stats errors
+              }
+          }
+      }, 100); // 100ms polling (10fps)
+  }
+
+  stopVolumeMonitoring() {
+      if (this.volumeInterval) {
+          clearInterval(this.volumeInterval);
+          this.volumeInterval = null;
+      }
+      this.onVolumeChangeCallback = null;
+  }
+  // -------------------------
 
   private async handleSignalingMessage(message: SignalingMessage) {
     switch (message.type) {
@@ -147,7 +197,7 @@ class CallService {
     }
   }
 
-  async startCall(friendId: string, senderName: string, isVideo: boolean = false) {
+  async startCall(friendId: string, senderName: string, senderAvatar?: string, isVideo: boolean = false) {
     if (!this.isSupported()) return;
     this.friendId = friendId;
     
@@ -174,6 +224,7 @@ class CallService {
       type: 'offer',
       senderId: this.userId!,
       senderName,
+      senderAvatar,
       data: { offer, isVideo },
     });
   }
@@ -301,6 +352,8 @@ class CallService {
   }
 
   endCall(notifyFriend: boolean = true) {
+    this.stopVolumeMonitoring(); // Stop monitoring on end
+    
     if (notifyFriend && this.friendId && this.userId) {
       signalingService.sendSignal(this.friendId, {
         type: 'hangup',

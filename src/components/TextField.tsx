@@ -68,7 +68,7 @@ export const TextField: React.FC<TextFieldProps> = ({
   };
 
   const getBorderRadii = () => {
-    const radius = Platform.OS === 'android' ? 4 : 12;
+    const radius = 12;
     if (groupPosition === 'top') return { borderTopLeftRadius: radius, borderTopRightRadius: radius };
     if (groupPosition === 'bottom') return { borderBottomLeftRadius: radius, borderBottomRightRadius: radius };
     if (groupPosition === 'middle') return { borderRadius: 0 };

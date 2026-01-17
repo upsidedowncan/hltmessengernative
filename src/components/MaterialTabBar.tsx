@@ -1,243 +1,200 @@
-import React, { useEffect } from 'react';
-import { View, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
-import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
+import React from 'react';
+import { StyleSheet, View, TouchableOpacity, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useAppTheme } from '../context/FeatureFlagContext';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Appbar } from 'react-native-paper';
 import Animated, { 
   useAnimatedStyle, 
   withSpring, 
-  useSharedValue,
-  withDelay,
-  runOnJS,
+  useSharedValue, 
+  interpolate, 
+  interpolateColor 
 } from 'react-native-reanimated';
-import { GestureDetector, Gesture } from 'react-native-gesture-handler';
-import { useAppTheme } from '../context/FeatureFlagContext';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const TAB_BAR_CONTENT_HEIGHT = 64;
-const PILL_WIDTH = 64;
-const PILL_HEIGHT = 32;
+interface MaterialTabBarProps {
+  state?: any;
+  descriptors?: any;
+  navigation?: any;
+  position?: any;
+  // Fallback props
+  title?: string;
+  children?: React.ReactNode;
+}
 
-export const MaterialTabBar: React.FC<BottomTabBarProps> = ({ state, descriptors, navigation }) => {
-  const { theme } = useAppTheme();
-  const insets = useSafeAreaInsets();
-  
-  const tabWidth = SCREEN_WIDTH / state.routes.length;
-  
-  const leftBound = useSharedValue(state.index * tabWidth + (tabWidth - PILL_WIDTH) / 2);
-  const rightBound = useSharedValue(leftBound.value + PILL_WIDTH);
-  const isDragging = useSharedValue(false);
+const TabItem = ({ 
+  route, 
+  index, 
+  state, 
+  descriptors, 
+  navigation, 
+  theme 
+}: any) => {
+  const isFocused = state.index === index;
+  const { options } = descriptors[route.key];
+  const label = options.tabBarLabel ?? options.title ?? route.name;
 
-  useEffect(() => {
-    if (isDragging.value) return;
-
-    const newLeft = state.index * tabWidth + (tabWidth - PILL_WIDTH) / 2;
-    const newRight = newLeft + PILL_WIDTH;
-
-    const springConfig = { damping: 20, stiffness: 150 };
-
-    if (newLeft > leftBound.value) {
-      rightBound.value = withSpring(newRight, springConfig);
-      leftBound.value = withDelay(60, withSpring(newLeft, springConfig));
-    } else {
-      leftBound.value = withSpring(newLeft, springConfig);
-      rightBound.value = withDelay(60, withSpring(newRight, springConfig));
-    }
-  }, [state.index]);
-
-  const panGesture = Gesture.Pan()
-    .onStart(() => {
-      isDragging.value = true;
-    })
-    .onUpdate((event) => {
-      const currentPos = state.index * tabWidth + (tabWidth - PILL_WIDTH) / 2;
-      const fingerLeft = currentPos + event.translationX;
-      
-      const dragSpringConfig = { damping: 18, stiffness: 120 };
-      
-      if (event.velocityX > 0) {
-        rightBound.value = fingerLeft + PILL_WIDTH;
-        leftBound.value = withSpring(fingerLeft, dragSpringConfig);
-      } else if (event.velocityX < 0) {
-        leftBound.value = fingerLeft;
-        rightBound.value = withSpring(fingerLeft + PILL_WIDTH, dragSpringConfig);
-      } else {
-        leftBound.value = fingerLeft;
-        rightBound.value = fingerLeft + PILL_WIDTH;
-      }
-    })
-    .onEnd((event) => {
-      isDragging.value = false;
-      
-      const currentPos = state.index * tabWidth + (tabWidth - PILL_WIDTH) / 2;
-      const fingerLeft = currentPos + event.translationX;
-      
-      // Momentum calculation: Where would the pill end up if it kept moving?
-      const momentumX = event.velocityX * 0.1; // 100ms projection
-      const projectedLeft = fingerLeft + momentumX;
-      const projectedCenter = projectedLeft + PILL_WIDTH / 2;
-      
-      // Determine target tab based on projected center
-      let targetIndex = Math.floor(projectedCenter / tabWidth);
-      
-      // Velocity-based "flick" override
-      const flickThreshold = 300;
-      if (Math.abs(event.velocityX) > flickThreshold) {
-        targetIndex = event.velocityX > 0 ? state.index + 1 : state.index - 1;
-      }
-      
-      const clampedIndex = Math.max(0, Math.min(state.routes.length - 1, targetIndex));
-
-      if (clampedIndex !== state.index) {
-        runOnJS(navigation.navigate)(state.routes[clampedIndex].name);
-      } else {
-        // Snap back to current tab with a bouncy spring
-        const snapLeft = state.index * tabWidth + (tabWidth - PILL_WIDTH) / 2;
-        const snapConfig = { damping: 15, stiffness: 200, mass: 0.8 };
-        leftBound.value = withSpring(snapLeft, snapConfig);
-        rightBound.value = withSpring(snapLeft + PILL_WIDTH, snapConfig);
-      }
+  const onPress = () => {
+    const event = navigation.emit({
+      type: 'tabPress',
+      target: route.key,
+      canPreventDefault: true,
     });
 
-  const animatedPillStyle = useAnimatedStyle(() => ({
-    left: leftBound.value,
-    width: Math.max(PILL_WIDTH, rightBound.value - leftBound.value),
-    transform: [
-      { translateY: (TAB_BAR_CONTENT_HEIGHT - PILL_HEIGHT) / 2 }
-    ],
+    if (!isFocused && !event.defaultPrevented) {
+      navigation.navigate(route.name, route.params);
+    }
+  };
+
+  const onLongPress = () => {
+    navigation.emit({
+      type: 'tabLongPress',
+      target: route.key,
+    });
+  };
+
+  // Animation for the pill background
+  const animation = useSharedValue(isFocused ? 1 : 0);
+
+  React.useEffect(() => {
+    animation.value = withSpring(isFocused ? 1 : 0, {
+      damping: 15,
+      stiffness: 150,
+    });
+  }, [isFocused]);
+
+  const rPillStyle = useAnimatedStyle(() => ({
+    opacity: animation.value,
+    transform: [{ scale: animation.value }],
+    backgroundColor: theme.tint + '20', // 20% opacity tint
   }));
 
-  const renderIcons = (active: boolean) => (
-    <View style={styles.iconLayer}>
-      {state.routes.map((route, index) => {
-        let iconName: keyof typeof Ionicons.glyphMap;
-        if (route.name === 'Chat') iconName = active ? 'chatbubbles' : 'chatbubbles-outline';
-        else if (route.name === 'Friends') iconName = active ? 'people' : 'people-outline';
-        else if (route.name === 'Profile') iconName = active ? 'person' : 'person-outline';
-        else iconName = 'alert';
+  const rTextStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(animation.value, [0, 1], [0.7, 1]),
+    transform: [{ scale: interpolate(animation.value, [0, 1], [0.9, 1]) }],
+    color: interpolateColor(
+      animation.value,
+      [0, 1],
+      [theme.tabIconDefault, theme.tint]
+    ),
+  }));
 
-        return (
-          <View key={route.key} style={styles.tabItem}>
-            <View style={styles.iconWrapper}>
-              <Ionicons 
-                name={iconName} 
-                size={24} 
-                color={active ? '#FFFFFF' : theme.tabIconDefault} 
-              />
-            </View>
-          </View>
-        );
-      })}
-    </View>
-  );
+  const renderIcon = () => {
+    const color = isFocused ? theme.tint : theme.tabIconDefault;
+    
+    if (options.tabBarIcon) {
+      return options.tabBarIcon({ focused: isFocused, color, size: 24 });
+    }
+
+    const name = route.name.toLowerCase();
+    let iconName = 'ellipse-outline';
+    
+    if (name.includes('chat')) iconName = isFocused ? 'chatbubbles' : 'chatbubbles-outline';
+    else if (name.includes('call')) iconName = isFocused ? 'call' : 'call-outline';
+    else if (name.includes('people') || name.includes('friend')) iconName = isFocused ? 'people' : 'people-outline';
+    else if (name.includes('setting')) iconName = isFocused ? 'settings' : 'settings-outline';
+    else if (name === 'ai') iconName = isFocused ? 'sparkles' : 'sparkles-outline';
+    else if (name.includes('profile')) iconName = isFocused ? 'person-circle' : 'person-circle-outline';
+    
+    return <Ionicons name={iconName as any} size={24} color={color} />;
+  };
 
   return (
-    <View style={[
-      styles.container, 
-      { 
-        backgroundColor: theme.background,
-        paddingBottom: insets.bottom,
-        height: TAB_BAR_CONTENT_HEIGHT + insets.bottom,
-        borderTopColor: theme.border,
-      }
-    ]}>
-      <GestureDetector gesture={panGesture}>
-        <View style={styles.content}>
-          {/* Layer 1: Inactive Icons */}
-          {renderIcons(false)}
+    <TouchableOpacity
+      onPress={onPress}
+      onLongPress={onLongPress}
+      style={styles.tabItem}
+      activeOpacity={0.7}
+    >
+      <View style={styles.iconWrapper}>
+        <Animated.View style={[StyleSheet.absoluteFill, styles.pill, rPillStyle]} />
+        {renderIcon()}
+      </View>
+      <Animated.Text style={[styles.label, rTextStyle]}>
+        {label}
+      </Animated.Text>
+    </TouchableOpacity>
+  );
+};
 
-          {/* Layer 2: Moving Pill */}
-          <Animated.View style={[
-            styles.pill, 
-            { 
-              backgroundColor: theme.tint,
-              height: PILL_HEIGHT,
-              borderRadius: PILL_HEIGHT / 2,
-            },
-            animatedPillStyle
-          ]} />
+export const MaterialTabBar: React.FC<MaterialTabBarProps> = ({
+  state,
+  descriptors,
+  navigation,
+  title,
+  children,
+}) => {
+  const { theme } = useAppTheme();
+  const insets = useSafeAreaInsets();
 
-          {/* Layer 3: Active Icons (Masked by Pill) */}
-          <Animated.View style={[
-            styles.maskedLayer,
-            animatedPillStyle,
-            { height: PILL_HEIGHT, borderRadius: PILL_HEIGHT / 2 }
-          ]}>
-             <Animated.View style={[
-               styles.activeIconContainer, 
-               { 
-                 width: SCREEN_WIDTH, 
-                 top: -(TAB_BAR_CONTENT_HEIGHT - PILL_HEIGHT) / 2 
-               },
-               useAnimatedStyle(() => ({
-                 left: -leftBound.value
-               }))
-             ]}>
-               {renderIcons(true)}
-             </Animated.View>
-          </Animated.View>
-          
-          {/* Invisible Touch Layer */}
-          <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
-            <View style={styles.iconLayer}>
-              {state.routes.map((route, index) => (
-                <TouchableOpacity
-                  key={route.key}
-                  onPress={() => {
-                    const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
-                    if (state.index !== index && !event.defaultPrevented) navigation.navigate(route.name);
-                  }}
-                  style={styles.tabItem}
-                  activeOpacity={1}
-                />
-              ))}
-            </View>
-          </View>
-        </View>
-      </GestureDetector>
-    </View>
+  // Check if this is being used as a Tab Bar
+  const isTabBar = state && state.routes && Array.isArray(state.routes);
+
+  if (isTabBar) {
+    return (
+      <View style={[
+        styles.container, 
+        { 
+          backgroundColor: theme.cardBackground,
+          borderTopColor: theme.border,
+          paddingBottom: insets.bottom,
+          height: 60 + insets.bottom,
+        }
+      ]}>
+        {state.routes.map((route: any, index: number) => (
+          <TabItem
+            key={route.key}
+            route={route}
+            index={index}
+            state={state}
+            descriptors={descriptors}
+            navigation={navigation}
+            theme={theme}
+          />
+        ))}
+      </View>
+    );
+  }
+
+  // Fallback to Appbar for header usage
+  return (
+    <Appbar.Header style={{ backgroundColor: theme.background }} elevated>
+      <Appbar.Content title={title} titleStyle={{ color: theme.text, fontWeight: '600' }} />
+      {children}
+    </Appbar.Header>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    borderTopWidth: StyleSheet.hairlineWidth,
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    elevation: 0,
-  },
-  content: {
-    height: TAB_BAR_CONTENT_HEIGHT,
-    width: '100%',
-  },
-  iconLayer: {
     flexDirection: 'row',
-    height: '100%',
-    width: '100%',
-    position: 'absolute',
+    borderTopWidth: StyleSheet.hairlineWidth,
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
   },
   tabItem: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    paddingVertical: 8,
   },
   iconWrapper: {
-    height: PILL_HEIGHT,
-    width: PILL_WIDTH,
-    justifyContent: 'center',
+    width: 50,
+    height: 32,
     alignItems: 'center',
-  },
-  pill: {
-    position: 'absolute',
-  },
-  maskedLayer: {
-    position: 'absolute',
+    justifyContent: 'center',
+    marginBottom: 4,
+    borderRadius: 16,
     overflow: 'hidden',
   },
-  activeIconContainer: {
-    height: TAB_BAR_CONTENT_HEIGHT,
-    position: 'absolute',
+  pill: {
+    borderRadius: 16,
+  },
+  label: {
+    fontSize: 10,
+    fontWeight: '500',
   },
 });

@@ -1,4 +1,4 @@
-export * from './NavigationBar';
+
 export * from './MaterialTabBar';
 export * from './Button';
 export * from './TextField';
@@ -12,3 +12,4 @@ export * from './Puller';
 export * from './ContextMenu';
 export * from './ChatListElement';
 export * from './Toast';
+export * from './ProfileHeader';

@@ -1,5 +1,4 @@
 
-export * from './MaterialTabBar';
 export * from './Button';
 export * from './TextField';
 export * from './Tile';
@@ -13,3 +12,4 @@ export * from './ContextMenu';
 export * from './ChatListElement';
 export * from './Toast';
 export * from './ProfileHeader';
+export * from './FloatingActionButton';

@@ -17,6 +17,7 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { MainStackParamList } from '../navigation/MainNavigator';
 import { useAppTheme } from '../context/FeatureFlagContext';
+import { AppBar } from '../components/AppBar';
 
 type Profile = {
   id: string;
@@ -242,6 +243,7 @@ export const FriendsScreen = () => {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
+      <AppBar title="People" isNative={false} showBackButton={false} />
       {/* Header Search */}
       <View style={[styles.header, { borderBottomColor: theme.border }]}>
           <View style={[styles.searchBar, { backgroundColor: theme.cardBackground }]}>
@@ -312,8 +314,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-      paddingTop: 110, // Adjusted to clear transparent navigation header
-      paddingBottom: 10,
+      paddingVertical: 10,
       paddingHorizontal: 16,
       borderBottomWidth: 1,
       zIndex: 10,

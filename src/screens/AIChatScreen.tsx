@@ -1061,6 +1061,10 @@ export const AIChatScreen = () => {
           )}
           inverted
           contentContainerStyle={styles.listContent}
+          removeClippedSubviews={true}
+          windowSize={5}
+          maxToRenderPerBatch={5}
+          initialNumToRender={10}
         />
 
         <View style={[styles.inputWrapper, { backgroundColor: theme.background, borderTopColor: theme.border, paddingBottom: Math.max(insets.bottom, 6) }]}>

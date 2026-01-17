@@ -6,6 +6,7 @@ import { MainStackParamList } from '../navigation/MainNavigator';
 import { supabase } from '../services/supabase';
 import { useAuth } from '../context/AuthContext';
 import { useAppTheme } from '../context/FeatureFlagContext';
+import { AppBar } from '../components/AppBar';
 
 type ChatPreview = {
   friend_id: string;
@@ -76,6 +77,7 @@ export const ChatScreen = () => {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
+      <AppBar title="Chats" isNative={false} showBackButton={false} />
       <FlatList
         data={chats}
         keyExtractor={item => item.friend_id}
@@ -131,7 +133,6 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingVertical: 10,
-    paddingTop: 100, 
   },
   itemContainer: {
     flexDirection: 'row',

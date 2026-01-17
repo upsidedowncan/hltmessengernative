@@ -4,7 +4,7 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAppTheme } from '../context/FeatureFlagContext';
 import { MainStackParamList } from '../navigation/MainNavigator';
-import { Button, Tile, ProfileHeader } from '../components';
+import { Button, Tile, ProfileHeader, AppBar } from '../components';
 import { useAuth } from '../context/AuthContext';
 import { NotificationSetup } from '../components/NotificationSetup';
 import { supabase } from '../services/supabase';
@@ -74,9 +74,7 @@ export const SettingsScreen = () => {
       style={[styles.container, { backgroundColor: theme.background }]}
       showsVerticalScrollIndicator={false}
       contentInsetAdjustmentBehavior="automatic">
-      <View style={styles.header}>
-        <Text style={[styles.headerTitle, { color: theme.text }]}>Settings</Text>
-      </View>
+      <AppBar title="Settings" isNative={true} largeTitle={true} />
 
       <ProfileHeader 
         fullName={fullName}

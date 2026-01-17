@@ -14,6 +14,14 @@
       "backgroundColor": "#ffffff"
     },
     "plugins": [
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "deploymentTarget": "15.1"
+          }
+        }
+      ],
       "expo-web-browser",
       "expo-media-library",
       "expo-image-picker",

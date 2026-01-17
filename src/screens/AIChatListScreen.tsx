@@ -8,6 +8,7 @@ import { MainStackParamList } from '../navigation/MainNavigator';
 import { AIService, AIConversation } from '../services/AIService';
 import { AppBar } from '../components/AppBar';
 import { ChatListElement } from '../components/ChatListElement';
+import { FloatingActionButton } from '../components/FloatingActionButton';
 
 export const AIChatListScreen = () => {
   const { theme, isDarkMode } = useAppTheme();
@@ -44,10 +45,6 @@ export const AIChatListScreen = () => {
     ]);
   };
 
-  const renderHeaderTitle = () => (
-    <Text style={{ color: theme.text, fontSize: 17, fontWeight: '600' }}>AI Chats</Text>
-  );
-
   const renderItem = ({ item }: { item: AIConversation }) => (
     <ChatListElement
       title={item.title}
@@ -62,12 +59,9 @@ export const AIChatListScreen = () => {
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       <AppBar 
-        centerComponent={renderHeaderTitle()}
-        rightComponent={
-            <TouchableOpacity onPress={handleCreateNew}>
-                <Ionicons name="create-outline" size={24} color={theme.tint} />
-            </TouchableOpacity>
-        }
+        title="AI Chats"
+        isNative={false}
+        showBackButton={false}
       />
       <FlatList
         data={conversations}
@@ -77,6 +71,7 @@ export const AIChatListScreen = () => {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); loadConversations(); }} tintColor={theme.tint} />}
         ListEmptyComponent={!loading ? <View style={styles.empty}><Text style={{ color: theme.tabIconDefault }}>No chats yet. Start one!</Text></View> : null}
       />
+      <FloatingActionButton onPress={handleCreateNew} icon="create-outline" />
     </View>
   );
 };

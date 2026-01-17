@@ -713,7 +713,7 @@ export const SingleChatScreen = () => {
                                   source={{ uri: att.url }} 
                                   style={styles.attachmentImage} 
                                   contentFit="cover"
-                                  cachePolicy="disk"
+                                  cachePolicy="memory-disk"
                                   transition={200}
                                 />
                             </TouchableOpacity>
@@ -967,6 +967,10 @@ export const SingleChatScreen = () => {
           )}
           inverted
           contentContainerStyle={styles.listContent}
+          removeClippedSubviews={true}
+          windowSize={5}
+          maxToRenderPerBatch={5}
+          initialNumToRender={10}
           onEndReached={() => {
               if (hasMore && !loading) {
                   setPage(p => {

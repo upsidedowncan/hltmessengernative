@@ -14,7 +14,7 @@ import { useAuth } from '../context/AuthContext';
 import { supabase } from '../services/supabase';
 import { MainStackParamList } from '../navigation/MainNavigator';
 import { useAppTheme } from '../context/FeatureFlagContext';
-import { Button, TextField, Tile } from '../components';
+import { Button, TextField, Tile, AppBar } from '../components';
 
 export const ProfileScreen = () => {
   const { user, profile, refreshProfile, signOut } = useAuth();
@@ -79,6 +79,7 @@ export const ProfileScreen = () => {
       style={{ flex: 1, backgroundColor: theme.background }}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
+      <AppBar title="Profile" isNative={false} showBackButton={false} />
       <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
             <View style={[styles.avatarContainer, { backgroundColor: (theme as any).secondaryContainer || theme.border, borderColor: theme.tint }]}>
@@ -141,7 +142,6 @@ const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
     padding: 24,
-    paddingTop: 100,
     paddingBottom: 100,
   },
   header: {

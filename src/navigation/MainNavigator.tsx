@@ -1,9 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { Platform } from 'react-native';
-import { createNativeBottomTabNavigator } from '@bottom-tabs/react-navigation';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
-import * as Font from 'expo-font';
 
 // --- Screen Imports ---
 import { ChatScreen } from '../screens/ChatScreen';
@@ -38,89 +37,33 @@ export type MainTabParamList = {
   Profile: undefined;
 };
 
-// Use the Native Bottom Tab Navigator
-const Tab = createNativeBottomTabNavigator<MainTabParamList>();
+// Use the Standard JS Bottom Tab Navigator
+const Tab = createBottomTabNavigator<MainTabParamList>();
 const Stack = createNativeStackNavigator<MainStackParamList>();
 
 const MainTabs = () => {
-  const { theme, isDarkMode } = useAppTheme();
-  
-  // Store generated icons for Android
-  const [icons, setIcons] = useState<Record<string, any>>({});
-  const [loaded, setLoaded] = useState(false);
-
-  useEffect(() => {
-    const loadIcons = async () => {
-      // iOS uses SF Symbols natively; we don't need to generate bitmaps.
-      if (Platform.OS === 'ios') {
-        setLoaded(true);
-        return;
-      }
-
-      try {
-        // Ensure fonts are loaded before generating images
-        if (!Font.isLoaded('Ionicons')) {
-          await Font.loadAsync(Ionicons.font);
-        }
-
-        // Pre-generate icons with the correct theme colors for Android
-        // We generate specific colors to ensure visibility if the native tinting is flaky with URIs
-        const [
-          chatActive, chatInactive,
-          peopleActive, peopleInactive,
-          aiActive, aiInactive,
-          profileActive, profileInactive
-        ] = await Promise.all([
-          Ionicons.getImageSource('chatbubbles', 24, theme.tint),
-          Ionicons.getImageSource('chatbubbles-outline', 24, theme.tabIconDefault),
-          Ionicons.getImageSource('people', 24, theme.tint),
-          Ionicons.getImageSource('people-outline', 24, theme.tabIconDefault),
-          Ionicons.getImageSource('sparkles', 24, theme.tint),
-          Ionicons.getImageSource('sparkles-outline', 24, theme.tabIconDefault),
-          Ionicons.getImageSource('person-circle', 24, theme.tint),
-          Ionicons.getImageSource('person-circle-outline', 24, theme.tabIconDefault),
-        ]);
-
-        setIcons({
-          chatActive, chatInactive,
-          peopleActive, peopleInactive,
-          aiActive, aiInactive,
-          profileActive, profileInactive,
-        });
-      } catch (e) {
-        console.warn('Failed to generate native tab icons', e);
-      } finally {
-        setLoaded(true);
-      }
-    };
-
-    loadIcons();
-  }, [theme]); // Re-run if theme changes
-
-  // Prevent rendering on Android until icons are ready to avoid invisible tabs
-  if (!loaded && Platform.OS === 'android') return null;
+  const { theme } = useAppTheme();
 
   return (
     <Tab.Navigator
-      // Native Tab Bar Options
-      tabBarActiveTintColor={theme.tint}
-      tabBarInactiveTintColor={theme.tabIconDefault}
-      translucent={true} // iOS effect
-      tabBarStyle={{
-        backgroundColor: theme.cardBackground,
+      screenOptions={{
+        headerShown: true,
+        tabBarActiveTintColor: theme.tint,
+        tabBarInactiveTintColor: theme.tabIconDefault,
+        tabBarStyle: {
+          backgroundColor: theme.cardBackground,
+          borderTopColor: theme.border,
+        },
       }}
-      // @ts-ignore: Native specific prop
-      activeIndicatorColor={isDarkMode ? 'rgba(255, 255, 255, 0.1)' : undefined}
     >
       <Tab.Screen 
         name="Chats" 
         component={ChatScreen} 
         options={{ 
           tabBarLabel: 'Chats',
-          tabBarIcon: ({ focused }) => Platform.select({
-            ios: { sfSymbol: focused ? 'bubble.left.and.bubble.right.fill' : 'bubble.left.and.bubble.right' },
-            android: focused ? icons.chatActive : icons.chatInactive,
-          }),
+          tabBarIcon: ({ focused, color, size }) => (
+            <Ionicons name={focused ? 'chatbubbles' : 'chatbubbles-outline'} size={size} color={color} />
+          ),
         }}
       />
       <Tab.Screen 
@@ -128,10 +71,9 @@ const MainTabs = () => {
         component={FriendsScreen} 
         options={{ 
           tabBarLabel: 'People',
-          tabBarIcon: ({ focused }) => Platform.select({
-            ios: { sfSymbol: focused ? 'person.2.fill' : 'person.2' },
-            android: focused ? icons.peopleActive : icons.peopleInactive,
-          }),
+          tabBarIcon: ({ focused, color, size }) => (
+            <Ionicons name={focused ? 'people' : 'people-outline'} size={size} color={color} />
+          ),
         }}
       />
       <Tab.Screen 
@@ -139,10 +81,9 @@ const MainTabs = () => {
         component={AIChatListScreen} 
         options={{ 
           tabBarLabel: 'AI',
-          tabBarIcon: ({ focused }) => Platform.select({
-            ios: { sfSymbol: focused ? 'sparkles' : 'sparkles' },
-            android: focused ? icons.aiActive : icons.aiInactive,
-          }),
+          tabBarIcon: ({ focused, color, size }) => (
+            <Ionicons name={focused ? 'sparkles' : 'sparkles-outline'} size={size} color={color} />
+          ),
         }}
       />
       <Tab.Screen 
@@ -150,10 +91,9 @@ const MainTabs = () => {
         component={ProfileScreen} 
         options={{ 
           tabBarLabel: 'Profile',
-          tabBarIcon: ({ focused }) => Platform.select({
-            ios: { sfSymbol: focused ? 'person.circle.fill' : 'person.circle' },
-            android: focused ? icons.profileActive : icons.profileInactive,
-          }),
+          tabBarIcon: ({ focused, color, size }) => (
+            <Ionicons name={focused ? 'person-circle' : 'person-circle-outline'} size={size} color={color} />
+          ),
         }}
       />
     </Tab.Navigator>

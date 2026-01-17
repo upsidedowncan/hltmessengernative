@@ -16,6 +16,7 @@ export const AIChatListScreen = () => {
   const [conversations, setConversations] = useState<AIConversation[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [creating, setCreating] = useState(false);
 
   const loadConversations = async () => {
     const data = await AIService.getConversations();
@@ -31,8 +32,16 @@ export const AIChatListScreen = () => {
   );
 
   const handleCreateNew = async () => {
-    const id = await AIService.createConversation();
-    navigation.navigate('AIChat', { conversationId: id });
+    if (creating) return;
+    setCreating(true);
+    try {
+      const id = await AIService.createConversation();
+      navigation.navigate('AIChat', { conversationId: id });
+    } catch (e) {
+      console.error('Failed to create conversation', e);
+    } finally {
+      setCreating(false);
+    }
   };
 
   const handleDelete = (id: string) => {

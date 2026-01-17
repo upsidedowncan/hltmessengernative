@@ -17,34 +17,14 @@ jobs:
       - name: Install Dependencies
         run: npm ci --legacy-peer-deps
 
-      # 1. Standard Prebuild (Generates the iOS project with the "wrong" 15.1 version)
       - name: Prebuild
         run: npx expo prebuild --platform ios --clean --no-install
 
-      # 2. Install Pods (Generates the Pods.xcodeproj, also likely with 15.1)
       - name: Install CocoaPods
         run: |
           cd ios
           pod install --repo-update
 
-      # 3. GOD MODE: Force Rewrite Xcode Project Files
-      #    This ignores all config files and hacks the .pbxproj files directly.
-      #    It changes EVERY deployment target it finds to 16.0.
-      - name: Force Update Deployment Target to 16.0
-        run: |
-          echo "Forcing all Xcode targets to iOS 16.0..."
-          
-          # Find all project.pbxproj files (Main App + Pods) and replace the target version
-          # The pattern matches 'IPHONEOS_DEPLOYMENT_TARGET = X.X;'
-          find ios -name "project.pbxproj" -print0 | xargs -0 sed -i '' 's/IPHONEOS_DEPLOYMENT_TARGET = [0-9.]*;/IPHONEOS_DEPLOYMENT_TARGET = 16.0;/g'
-          
-          echo "Verification (Should be empty if successful):"
-          grep -r "IPHONEOS_DEPLOYMENT_TARGET = 15.1" ios || echo "Clean! No 15.1 targets found."
-          
-          echo "Verification (Should show 16.0):"
-          grep -r "IPHONEOS_DEPLOYMENT_TARGET = 16.0" ios | head -n 5
-
-      # 4. Build (Now guaranteed to run with 16.0)
       - name: Build Unsigned IPA
         run: |
           cd ios

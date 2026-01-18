@@ -246,7 +246,7 @@ export default function FriendsScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
-      <AppBar title="People" isNative={true} showBackButton={false} />
+      <AppBar title="People" isNative={false} showBackButton={false} />
       {/* Header Search */}
       <View style={[styles.header, { borderBottomColor: theme.border }]}>
           <View style={[styles.searchBar, { backgroundColor: theme.cardBackground }]}>

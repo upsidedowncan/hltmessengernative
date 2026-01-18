@@ -82,11 +82,11 @@ export default function ChatScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
-      <AppBar title="Chats" isNative={true} showBackButton={false} />
+      <AppBar title="Chats" isNative={false} showBackButton={false} />
       <FlatList
         data={chats}
         keyExtractor={item => item.friend_id}
-        contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 10 }]}
+        contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 80 }]}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchChats(); }} tintColor={theme.tint} />
         }

@@ -7,16 +7,6 @@ export default function TabLayout() {
 
   return (
     <NativeTabs
-      backgroundColor={theme.cardBackground}
-      indicatorColor={theme.tint}
-      iconColor={{
-        default: theme.tabIconDefault,
-        selected: '#FFFFFF'
-      }}
-      labelStyle={{
-        selected: { color: theme.tint },
-        default: { color: theme.tabIconDefault }
-      }}
     >
       <NativeTabs.Trigger name="chats">
         <Label>Chats</Label>

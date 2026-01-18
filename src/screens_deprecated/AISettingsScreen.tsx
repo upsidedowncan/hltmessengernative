@@ -105,7 +105,8 @@ export const AISettingsScreen = () => {
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       <AppBar
         title="AI Settings"
-        showBack
+        showBackButton={true}
+        isNative={true}
         rightComponent={
           <TouchableOpacity onPress={handleSave}>
             <Text style={{ color: theme.tint, fontWeight: '600', fontSize: 16 }}>Save</Text>

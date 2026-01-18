@@ -19,7 +19,8 @@ import {
   useWindowDimensions,
   Linking,
 } from 'react-native';
-import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
+import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { 
@@ -38,11 +39,10 @@ import { WebView } from 'react-native-webview';
 import { Audio } from 'expo-av';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import { MainStackParamList } from '../navigation/MainNavigator';
-import { useAppTheme } from '../context/FeatureFlagContext';
-import { AppBar } from '../components/AppBar';
-import { supabase } from '../services/supabase';
-import { AIService, AISettings, DEFAULT_AI_SETTINGS } from '../services/AIService';
+import { useAppTheme } from '../../src/context/FeatureFlagContext';
+import { AppBar } from '../../src/components/AppBar';
+import { supabase } from '../../src/services/supabase';
+import { AIService, AISettings, DEFAULT_AI_SETTINGS } from '../../src/services/AIService';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -793,17 +793,12 @@ const MessageItem = React.memo(({
   );
 });
 
-export const AIChatScreen = () => {
+export default function AIChatScreen() {
+  const router = useRouter();
+  const params = useLocalSearchParams();
+  const conversationId = params.conversationId as string;
   const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
-  const route = useRoute<RouteProp<MainStackParamList, 'AIChat'>>();
   const { theme, isDarkMode } = useAppTheme();
-  const insets = useSafeAreaInsets();
-  
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [inputText, setInputText] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [settings, setSettings] = useState<AISettings>(DEFAULT_AI_SETTINGS);
-  const conversationId = route.params?.conversationId;
   const [fullScreenHtml, setFullScreenHtml] = useState<string | null>(null);
   const [isLimitReached, setIsLimitReached] = useState(false);
   const [playingMessageId, setPlayingMessageId] = useState<string | null>(null);
@@ -1015,7 +1010,7 @@ export const AIChatScreen = () => {
 
   const renderHeaderRight = () => (
     <TouchableOpacity 
-      onPress={() => navigation.navigate('AISettings' as any)}
+      onPress={() => router.push('/ai-settings')}
       style={{ marginRight: 10 }}
     >
       <Ionicons name="settings-outline" size={24} color={theme.tint} />
@@ -1029,6 +1024,7 @@ export const AIChatScreen = () => {
       <AppBar 
         centerComponent={renderHeaderTitle()}
         rightComponent={renderHeaderRight()}
+        isNative={true}
       />
       <KeyboardAvoidingView 
           style={{ flex: 1 }}

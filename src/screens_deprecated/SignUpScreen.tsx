@@ -11,16 +11,12 @@ import {
   Platform,
   ScrollView,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { AuthStackParamList } from '../navigation/AuthNavigator';
+import { useRouter } from 'expo-router';
 import { supabase } from '../services/supabase';
 import { useAppTheme } from '../context/FeatureFlagContext';
 
-type SignUpScreenNavigationProp = NativeStackNavigationProp<AuthStackParamList, 'SignUp'>;
-
 export const SignUpScreen = () => {
-  const navigation = useNavigation<SignUpScreenNavigationProp>();
+  const router = useRouter();
   const { theme } = useAppTheme();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -47,7 +43,7 @@ export const SignUpScreen = () => {
       Alert.alert('Sign Up Failed', error.message);
     } else {
       Alert.alert('Success', 'Check your email for confirmation!');
-      navigation.navigate('Login');
+      router.replace('/(auth)/login');
     }
     setLoading(false);
   };
@@ -117,7 +113,7 @@ export const SignUpScreen = () => {
 
           <View style={styles.footer}>
             <Text style={{ color: theme.text, opacity: 0.7 }}>Already have an account?</Text>
-            <TouchableOpacity onPress={() => navigation.navigate('Login')}>
+            <TouchableOpacity onPress={() => router.push('/(auth)/login')}>
               <Text style={{ color: theme.tint, fontWeight: 'bold' }}>Log In</Text>
             </TouchableOpacity>
           </View>

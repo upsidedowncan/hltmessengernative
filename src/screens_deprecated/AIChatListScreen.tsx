@@ -1,10 +1,9 @@
 import React, { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, Alert } from 'react-native';
-import { useFocusEffect, useNavigation } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useFocusEffect } from '@react-navigation/native';
+import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppTheme } from '../context/FeatureFlagContext';
-import { MainStackParamList } from '../navigation/MainNavigator';
 import { AIService, AIConversation } from '../services/AIService';
 import { AppBar } from '../components/AppBar';
 import { ChatListElement } from '../components/ChatListElement';
@@ -12,7 +11,7 @@ import { FloatingActionButton } from '../components/FloatingActionButton';
 
 export const AIChatListScreen = () => {
   const { theme, isDarkMode } = useAppTheme();
-  const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
+  const router = useRouter();
   const [conversations, setConversations] = useState<AIConversation[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -36,7 +35,7 @@ export const AIChatListScreen = () => {
     setCreating(true);
     try {
       const id = await AIService.createConversation();
-      navigation.navigate('AIChat', { conversationId: id });
+      router.push({ pathname: '/ai-chat/[id]', params: { id, conversationId: id } });
     } catch (e) {
       console.error('Failed to create conversation', e);
     } finally {
@@ -59,7 +58,7 @@ export const AIChatListScreen = () => {
       title={item.title}
       subtitle={item.preview || 'No messages yet'}
       time={new Date(item.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-      onPress={() => navigation.navigate('AIChat', { conversationId: item.id })}
+      onPress={() => router.push({ pathname: '/ai-chat/[id]', params: { id: item.id, conversationId: item.id } })}
       onDelete={() => handleDelete(item.id)}
       onArchive={() => handleDelete(item.id)} // Archive behavior not implemented yet
     />
@@ -69,7 +68,7 @@ export const AIChatListScreen = () => {
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       <AppBar 
         title="AI Chats"
-        isNative={false}
+        isNative={true}
         showBackButton={false}
       />
       <FlatList

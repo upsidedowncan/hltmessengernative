@@ -1,9 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useRouter } from 'expo-router';
 import { useAppTheme } from '../context/FeatureFlagContext';
-import { MainStackParamList } from '../navigation/MainNavigator';
 import { Button, Tile, ProfileHeader, AppBar } from '../components';
 import { useAuth } from '../context/AuthContext';
 import { NotificationSetup } from '../components/NotificationSetup';
@@ -12,7 +10,7 @@ import { supabase } from '../services/supabase';
 export const SettingsScreen = () => {
   const { theme } = useAppTheme();
   const { signOut, profile, refreshProfile, user } = useAuth();
-  const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
+  const router = useRouter();
 
   const [username, setUsername] = useState('');
   const [fullName, setFullName] = useState('');
@@ -102,13 +100,13 @@ export const SettingsScreen = () => {
           <Tile
             title="Component Lab"
             icon="beaker-outline"
-            onPress={() => navigation.navigate('ComponentTest')}
+            onPress={() => router.push('/component-test')}
             groupPosition="top"
           />
           <Tile
             title="Developer Settings"
             icon="code-slash-outline"
-            onPress={() => navigation.navigate('DevSettings')}
+            onPress={() => router.push('/dev-settings')}
             groupPosition="bottom"
           />
         </View>
@@ -191,4 +189,3 @@ const styles = StyleSheet.create({
     gap: 0,
   },
 });
-

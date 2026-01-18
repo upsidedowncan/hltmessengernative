@@ -3,14 +3,7 @@ module.exports = function(api) {
   return {
     presets: ['babel-preset-expo'],
     plugins: [
-        // NOTE: this is optional, you don't *need* the compiler
-        [
-            'transform-inline-environment-variables',
-            {
-                include: ['EXPO_ROUTER_APP_ROOT'],
-            },
-        ],
-        'react-native-reanimated/plugin',
+      'react-native-reanimated/plugin',
     ],
   };
 };

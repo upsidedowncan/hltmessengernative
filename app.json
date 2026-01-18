@@ -33,7 +33,8 @@
           "microphonePermission": "Allow $(PRODUCT_NAME) to access your microphone."
         }
       ],
-      "react-native-bottom-tabs"
+      "react-native-bottom-tabs",
+      "expo-router"
     ],
     "ios": {
       "supportsTablet": true,

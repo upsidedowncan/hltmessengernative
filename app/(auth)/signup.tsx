@@ -11,33 +11,39 @@ import {
   Platform,
   ScrollView,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { AuthStackParamList } from '../navigation/AuthNavigator';
-import { supabase } from '../services/supabase';
-import { useAppTheme } from '../context/FeatureFlagContext';
+import { useRouter } from 'expo-router';
+import { supabase } from '../../src/services/supabase';
+import { useAppTheme } from '../../src/context/FeatureFlagContext';
 
-type ForgotPasswordScreenNavigationProp = NativeStackNavigationProp<AuthStackParamList, 'ForgotPassword'>;
-
-export const ForgotPasswordScreen = () => {
-  const navigation = useNavigation<ForgotPasswordScreenNavigationProp>();
+export default function SignUpScreen() {
+  const router = useRouter();
   const { theme } = useAppTheme();
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleResetPassword = async () => {
-    if (!email) {
-      Alert.alert('Error', 'Please enter your email.');
+  const handleSignUp = async () => {
+    if (!email || !password || !confirmPassword) {
+      Alert.alert('Error', 'Please fill in all fields.');
       return;
     }
+    if (password !== confirmPassword) {
+      Alert.alert('Error', 'Passwords do not match.');
+      return;
+    }
+
     setLoading(true);
-    const { error } = await supabase.auth.resetPasswordForEmail(email);
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+    });
 
     if (error) {
-      Alert.alert('Error', error.message);
+      Alert.alert('Sign Up Failed', error.message);
     } else {
-      Alert.alert('Success', 'Check your email for the reset link!');
-      navigation.navigate('Login');
+      Alert.alert('Success', 'Check your email for confirmation!');
+      router.replace('/(auth)/login');
     }
     setLoading(false);
   };
@@ -47,11 +53,11 @@ export const ForgotPasswordScreen = () => {
       style={{ flex: 1, backgroundColor: theme.background }}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+      <ScrollView contentContainerStyle={styles.container}>
         <View style={styles.content}>
-          <Text style={[styles.title, { color: theme.text }]}>Reset Password</Text>
+          <Text style={[styles.title, { color: theme.text }]}>Create Account</Text>
           <Text style={[styles.subtitle, { color: theme.text, opacity: 0.7 }]}>
-            Enter your email and we'll send you a link to reset your password.
+            Join HLT Messenger and start chatting with your friends.
           </Text>
 
           <View style={styles.form}>
@@ -68,23 +74,47 @@ export const ForgotPasswordScreen = () => {
               />
             </View>
 
+            <View>
+              <Text style={[styles.label, { color: theme.text }]}>Password</Text>
+              <TextInput
+                style={[styles.input, { color: theme.text, borderColor: theme.border, backgroundColor: theme.cardBackground }]}
+                secureTextEntry
+                value={password}
+                onChangeText={setPassword}
+                placeholder="Create a password"
+                placeholderTextColor={theme.tabIconDefault}
+              />
+            </View>
+
+            <View>
+              <Text style={[styles.label, { color: theme.text }]}>Confirm Password</Text>
+              <TextInput
+                style={[styles.input, { color: theme.text, borderColor: theme.border, backgroundColor: theme.cardBackground }]}
+                secureTextEntry
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+                placeholder="Repeat your password"
+                placeholderTextColor={theme.tabIconDefault}
+              />
+            </View>
+
             <TouchableOpacity
               style={[styles.button, { backgroundColor: theme.tint, opacity: loading ? 0.7 : 1 }]}
-              onPress={handleResetPassword}
+              onPress={handleSignUp}
               disabled={loading}
             >
               {loading ? (
                 <ActivityIndicator color="#fff" />
               ) : (
-                <Text style={styles.buttonText}>Send Reset Link</Text>
+                <Text style={styles.buttonText}>Sign Up</Text>
               )}
             </TouchableOpacity>
+          </View>
 
-            <TouchableOpacity
-              style={styles.backButton}
-              onPress={() => navigation.navigate('Login')}
-            >
-              <Text style={{ color: theme.tint, fontWeight: 'bold' }}>Back to Login</Text>
+          <View style={styles.footer}>
+            <Text style={{ color: theme.text, opacity: 0.7 }}>Already have an account?</Text>
+            <TouchableOpacity onPress={() => router.push('/(auth)/login')}>
+              <Text style={{ color: theme.tint, fontWeight: 'bold' }}>Log In</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -142,8 +172,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
   },
-  backButton: {
+  footer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
     alignItems: 'center',
+    gap: 6,
     marginTop: 10,
   },
 });

@@ -13,9 +13,8 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../services/supabase';
 import { useAuth } from '../context/AuthContext';
-import { useFocusEffect, useNavigation } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { MainStackParamList } from '../navigation/MainNavigator';
+import { useRouter } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import { useAppTheme } from '../context/FeatureFlagContext';
 import { AppBar } from '../components/AppBar';
 
@@ -46,7 +45,7 @@ const Avatar = ({ name }: { name: string }) => {
 export const FriendsScreen = () => {
   const { user } = useAuth();
   const { theme } = useAppTheme();
-  const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
+  const router = useRouter();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<Profile[]>([]);
@@ -56,8 +55,6 @@ export const FriendsScreen = () => {
   const [requests, setRequests] = useState<Friendship[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-
-  // ... (keeping existing fetch logic, search logic, etc.)
 
   const fetchFriendsAndRequests = async () => {
     if (!user) return;
@@ -175,10 +172,14 @@ export const FriendsScreen = () => {
   };
 
   const openChat = (friendId: string, friendName: string, friendAvatar: string | null) => {
-      navigation.navigate('SingleChat', {
-          friendId,
-          friendName,
-          friendAvatar: friendAvatar || undefined
+      router.push({
+          pathname: '/chat/[id]',
+          params: {
+              id: friendId,
+              friendId,
+              friendName,
+              friendAvatar: friendAvatar || undefined
+          }
       });
   };
 
@@ -243,7 +244,7 @@ export const FriendsScreen = () => {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
-      <AppBar title="People" isNative={false} showBackButton={false} />
+      <AppBar title="People" isNative={true} showBackButton={false} />
       {/* Header Search */}
       <View style={[styles.header, { borderBottomColor: theme.border }]}>
           <View style={[styles.searchBar, { backgroundColor: theme.cardBackground }]}>

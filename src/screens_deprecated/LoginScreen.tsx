@@ -11,17 +11,13 @@ import {
   Platform,
   ScrollView,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { AuthStackParamList } from '../navigation/AuthNavigator';
+import { useRouter } from 'expo-router';
 import { supabase } from '../services/supabase';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppTheme } from '../context/FeatureFlagContext';
 
-type LoginScreenNavigationProp = NativeStackNavigationProp<AuthStackParamList, 'Login'>;
-
 export const LoginScreen = () => {
-  const navigation = useNavigation<LoginScreenNavigationProp>();
+  const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -104,7 +100,7 @@ export const LoginScreen = () => {
 
               <TouchableOpacity
                 style={styles.centerContainer}
-                onPress={() => navigation.navigate('ForgotPassword')}
+                onPress={() => router.push('/(auth)/forgot-password')}
               >
                 <Text style={{ color: theme.tint }}>Forgot Password?</Text>
               </TouchableOpacity>
@@ -127,7 +123,7 @@ export const LoginScreen = () => {
 
           <View style={styles.footerContainer}>
             <Text style={{ opacity: 0.7, color: theme.text }}>Don't have an account?</Text>
-            <TouchableOpacity onPress={() => navigation.navigate('SignUp')}>
+            <TouchableOpacity onPress={() => router.push('/(auth)/signup')}>
               <Text style={{ color: theme.tint, fontWeight: 'bold' }}>Sign Up</Text>
             </TouchableOpacity>
           </View>

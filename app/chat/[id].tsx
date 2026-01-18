@@ -20,8 +20,7 @@ import {
   DeviceEventEmitter,
   Keyboard,
 } from 'react-native';
-import { useRoute, RouteProp, useNavigation } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Image } from 'expo-image';
@@ -45,15 +44,14 @@ import Animated, {
 } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 
-import { MainStackParamList } from '../navigation/MainNavigator';
-import { supabase } from '../services/supabase';
-import { useAuth } from '../context/AuthContext';
-import { useAppTheme, useFeatureFlags } from '../context/FeatureFlagContext';
-import { useCall } from '../context/CallContext';
-import { callService } from '../services/CallService';
-import { AppBar } from '../components/AppBar';
-import { useSendNotification } from '../hooks/useSendNotification';
-import { Colors } from '../constants/Colors';
+import { supabase } from '../../src/services/supabase';
+import { useAuth } from '../../src/context/AuthContext';
+import { useAppTheme, useFeatureFlags } from '../../src/context/FeatureFlagContext';
+import { useCall } from '../../src/context/CallContext';
+import { callService } from '../../src/services/CallService';
+import { AppBar } from '../../src/components/AppBar';
+import { useSendNotification } from '../../src/hooks/useSendNotification';
+import { Colors } from '../../src/constants/Colors';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -62,7 +60,7 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
-type SingleChatScreenRouteProp = RouteProp<MainStackParamList, 'SingleChat'>;
+// Remove RouteProp types as they are not needed for expo-router
 
 type Attachment = {
   type: 'image' | 'file' | 'audio';
@@ -83,10 +81,13 @@ type Message = {
   is_edited: boolean;
 };
 
-export const SingleChatScreen = () => {
-  const route = useRoute<SingleChatScreenRouteProp>();
-  const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
-  const { friendId, friendName, friendAvatar } = route.params;
+export default function SingleChatScreen() {
+  const router = useRouter();
+  const params = useLocalSearchParams();
+  const friendId = params.friendId as string;
+  const friendName = params.friendName as string;
+  const friendAvatar = params.friendAvatar as string | undefined;
+
   const { user, profile } = useAuth();
   const { theme, isDarkMode } = useAppTheme();
   const { sendNotification } = useSendNotification();
@@ -916,7 +917,10 @@ export const SingleChatScreen = () => {
         <TouchableOpacity 
           onPress={() => {
             setIsCallInProgress(true);
-            navigation.navigate('Call', { friendId, friendName, friendAvatar, isIncoming: false, isVideo: false });
+            router.push({
+              pathname: '/call/[id]',
+              params: { id: friendId, friendId, friendName, friendAvatar: friendAvatar || '', isIncoming: 'false', isVideo: 'false' }
+            });
           }}
           style={{ marginRight: 15 }}
         >
@@ -925,7 +929,10 @@ export const SingleChatScreen = () => {
         <TouchableOpacity 
           onPress={() => {
             setIsCallInProgress(true);
-            navigation.navigate('Call', { friendId, friendName, friendAvatar, isIncoming: false, isVideo: true });
+            router.push({
+              pathname: '/call/[id]',
+              params: { id: friendId, friendId, friendName, friendAvatar: friendAvatar || '', isIncoming: 'false', isVideo: 'true' }
+            });
           }}
           style={{ marginRight: 10 }}
         >
@@ -940,6 +947,7 @@ export const SingleChatScreen = () => {
       <AppBar 
         centerComponent={renderHeaderTitle()}
         rightComponent={renderHeaderRight()}
+        isNative={true}
       />
       <KeyboardAvoidingView 
           style={{ flex: 1 }}

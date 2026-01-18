@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, Dimensions, TouchableWithoutFeedback, Platform, StatusBar } from 'react-native';
-import { useRoute, RouteProp, useNavigation } from '@react-navigation/native';
-import { MainStackParamList } from '../navigation/MainNavigator';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { callService } from '../services/CallService';
 import { useAuth } from '../context/AuthContext';
 import { useAppTheme } from '../context/FeatureFlagContext';
@@ -14,16 +13,11 @@ import Animated, {
   withTiming, 
   runOnJS,
   interpolate,
-  Extrapolation,
   Easing,
-  withRepeat,
-  withDelay
 } from 'react-native-reanimated';
 import { GestureDetector, Gesture } from 'react-native-gesture-handler';
-import { Toolbar, ToolbarItem } from '../components/Toolbar';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import { Image } from 'expo-image';
 import { CallBackground } from '../components/CallBackground';
@@ -42,10 +36,6 @@ try {
 } catch (e) {
   // Not available
 }
-
-type CallScreenRouteProp = RouteProp<MainStackParamList, 'Call'>;
-
-// --- Components ---
 
 const CallDuration = ({ isActive }: { isActive: boolean }) => {
   const [duration, setDuration] = useState(0);
@@ -77,7 +67,6 @@ const CallDuration = ({ isActive }: { isActive: boolean }) => {
   );
 };
 
-// Samsung Style Swipe Up Button for Incoming Call
 const SwipeUpButton = ({ 
   type, 
   onTrigger 
@@ -155,11 +144,17 @@ const SwipeUpButton = ({
 };
 
 export const CallScreen = () => {
-  const route = useRoute<CallScreenRouteProp>();
-  const navigation = useNavigation();
-  const { friendId, friendName, friendAvatar, isIncoming, isVideo: initialIsVideo } = route.params;
+  const router = useRouter();
+  const params = useLocalSearchParams();
+  const friendId = params.friendId as string;
+  const friendName = params.friendName as string;
+  const friendAvatar = params.friendAvatar as string | undefined;
+  const isIncoming = params.isIncoming === 'true';
+  const initialIsVideo = params.isVideo === 'true';
+  const isVideo = initialIsVideo;
+
   const { theme } = useAppTheme();
-  const { profile: userProfile } = useAuth(); // Get user profile
+  const { profile: userProfile } = useAuth();
   const { setIsCallInProgress } = useCall() as any;
   
   const [remoteStream, setRemoteStream] = useState<any>(null);
@@ -177,7 +172,6 @@ export const CallScreen = () => {
   
   const ringingSoundRef = useRef<Audio.Sound | null>(null);
   
-  // Controls Animation
   const controlsTranslateY = useSharedValue(0);
 
   useEffect(() => {
@@ -187,13 +181,11 @@ export const CallScreen = () => {
     });
   }, [controlsVisible]);
 
-  // PIP Dragging values (Initially Top-Right)
   const translateX = useSharedValue(0);
   const translateY = useSharedValue(0);
   const contextX = useSharedValue(0);
   const contextY = useSharedValue(0);
 
-  // PIP Snap Logic
   const isBottom = useSharedValue(false);
 
   function setIsBottom(val: boolean) {
@@ -306,12 +298,11 @@ export const CallScreen = () => {
     if (!isIncoming) playRinging();
 
     if (!callService.isSupported()) {
-      if (navigation.canGoBack()) navigation.goBack();
-      else navigation.navigate('MainTabs' as any);
+      if (router.canGoBack()) router.back();
+      else router.replace('/(tabs)/chats');
       return;
     }
     
-    // Use user's real name or fallback
     const myName = userProfile?.full_name || 'User';
     const myAvatar = userProfile?.avatar_url || undefined;
 
@@ -323,7 +314,6 @@ export const CallScreen = () => {
         setCallStatus('Connected');
         stopRinging();
         setLocalStream(callService.getLocalStream());
-        // Start monitoring volume for visualizer
         callService.startVolumeMonitoring((vol) => {
            setRemoteVolume(vol);
         });
@@ -331,8 +321,8 @@ export const CallScreen = () => {
       () => {
         setIsCallInProgress(false);
         stopRinging();
-        if (navigation.canGoBack()) navigation.goBack();
-        else navigation.navigate('MainTabs' as any);
+        if (router.canGoBack()) router.back();
+        else router.replace('/(tabs)/chats');
       },
       (stream) => {
         setLocalStream(stream);
@@ -347,7 +337,7 @@ export const CallScreen = () => {
     return () => {
       setIsCallInProgress(false);
       stopRinging();
-      callService.stopVolumeMonitoring(); // Ensure we stop polling
+      callService.stopVolumeMonitoring();
       callService.endCall();
     };
   }, []);
@@ -363,15 +353,15 @@ export const CallScreen = () => {
   const handleDecline = () => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     callService.endCall();
-    if (navigation.canGoBack()) navigation.goBack();
-    else navigation.navigate('MainTabs' as any);
+    if (router.canGoBack()) router.back();
+    else router.replace('/(tabs)/chats');
   };
 
   const handleHangup = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     callService.endCall();
-    if (navigation.canGoBack()) navigation.goBack();
-    else navigation.navigate('MainTabs' as any);
+    if (router.canGoBack()) router.back();
+    else router.replace('/(tabs)/chats');
   };
 
   const toggleMute = () => {
@@ -447,12 +437,10 @@ export const CallScreen = () => {
       <StatusBar hidden />
       <TouchableWithoutFeedback onPress={toggleControls}>
         <View style={styles.videoContainer}>
-            {/* Background Layer */}
             <View style={StyleSheet.absoluteFill}>
                <CallBackground volume={remoteVolume} />
             </View>
 
-            {/* Video Layer (Only shown if video is present) */}
             <View style={StyleSheet.absoluteFill}>
               {RTCView && (
                 isSwapped ? (
@@ -467,7 +455,6 @@ export const CallScreen = () => {
               )}
             </View>
           
-          {/* PIP Video (Local by default, Remote if swapped) */}
           {((localStream && !isSwapped && isVideoEnabled) || (remoteStream && isSwapped && hasRemoteVideo)) && RTCView && (
             <GestureDetector gesture={dragGesture}>
               <Animated.View style={[styles.pipContainer, pipStyle]}>
@@ -481,7 +468,6 @@ export const CallScreen = () => {
                       mirror={!isSwapped}
                       zOrder={1}
                     />
-                    {/* Mute Indicator on PIP */}
                     {!isSwapped && isMuted && (
                        <View style={styles.pipMuteOverlay}>
                           <Ionicons name="mic-off" size={16} color="#fff" />
@@ -493,7 +479,6 @@ export const CallScreen = () => {
             </GestureDetector>
           )}
 
-          {/* Avatar/Info (Shown when not connected or no video) */}
           {((!isSwapped && !hasRemoteVideo) || (isSwapped && !isVideoEnabled) || callStatus !== 'Connected') && (
              <View style={styles.infoContent}>
                 <Text style={styles.userName}>{friendName}</Text>
@@ -502,17 +487,13 @@ export const CallScreen = () => {
         </View>
       </TouchableWithoutFeedback>
 
-      {/* UI Overlay */}
       <View style={styles.uiOverlay} pointerEvents="box-none">
-        
-        {/* Top Section */}
         {hasAnswered && (
           <Animated.View style={[styles.topBar, controlsAnimatedStyle]}>
              <SafeAreaView />
           </Animated.View>
         )}
 
-        {/* Incoming Call Actions - SAMSUNG STYLE */}
         {!hasAnswered && (
           <SafeAreaView style={styles.incomingControls} pointerEvents="box-none">
              <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
@@ -533,7 +514,6 @@ export const CallScreen = () => {
           </SafeAreaView>
         )}
 
-        {/* Active Call Controls */}
         {hasAnswered && (
           <Animated.View style={[styles.activeControls, controlsAnimatedStyle]}>
              <View style={styles.timerContainerDesign}>
@@ -584,7 +564,7 @@ const styles = StyleSheet.create({
 
   infoContent: { 
     position: 'absolute', 
-    top: 367, // From CSS top: 367px
+    top: 367, 
     width: '100%', 
     alignItems: 'center', 
     zIndex: -1 
@@ -607,7 +587,7 @@ const styles = StyleSheet.create({
   timerWrapper: {},
   timerText: { 
     color: '#fff', 
-    fontSize: 31.6, // From CSS font-size: 31.5987px
+    fontSize: 31.6, 
     fontWeight: '400', 
     fontVariant: ['tabular-nums'],
   },
@@ -618,7 +598,7 @@ const styles = StyleSheet.create({
   },
 
   timerContainerDesign: {
-      marginBottom: 38, // 834 (top of buttons) - 789 (top of timer) - 38 (height of timer) = 7px ? CSS says top 789, buttons top 834. Gap is 834 - 789 - 38 = 7px.
+      marginBottom: 38,
       alignItems: 'center',
   },
 
@@ -635,7 +615,7 @@ const styles = StyleSheet.create({
 
   activeControls: {
     position: 'absolute',
-    bottom: Platform.OS === 'ios' ? 34 : 14, // Safe area + margin
+    bottom: Platform.OS === 'ios' ? 34 : 14, 
     left: 19, 
     right: 19,
   },
@@ -656,7 +636,7 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: 13,
   },
   hangupBtn: {
-    flex: 1, // To fill the rest (two 78px blocks)
+    flex: 1, 
     backgroundColor: 'rgba(233, 52, 52, 0.7)',
     borderTopRightRadius: 13,
     borderBottomRightRadius: 13,

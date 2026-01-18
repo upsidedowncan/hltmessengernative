@@ -1,12 +1,8 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import { useRouter } from 'expo-router';
 import { useAuth } from './AuthContext';
 import { signalingService, SignalingMessage } from '../services/SignalingService';
 import { callService } from '../services/CallService';
-import { useNavigation } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { MainStackParamList } from '../navigation/MainNavigator';
-
-import { featureFlagService } from '../services/FeatureFlagService';
 import { useFeatureFlags } from './FeatureFlagContext';
 
 interface CallContextType {
@@ -19,7 +15,7 @@ const CallContext = createContext<CallContextType | undefined>(undefined);
 export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user } = useAuth();
   const { isEnabled, isLoading: flagsLoading } = useFeatureFlags();
-  const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
+  const router = useRouter();
   const [isCallInProgress, setIsCallInProgress] = useState(false);
 
   useEffect(() => {
@@ -37,12 +33,16 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setIsCallInProgress(true);
           const isVideoCall = message.data?.isVideo || false;
           // Navigate to CallScreen for incoming call
-          navigation.navigate('Call', {
-            friendId: message.senderId,
-            friendName: message.senderName || 'Unknown',
-            friendAvatar: message.senderAvatar,
-            isIncoming: true,
-            isVideo: isVideoCall,
+          router.push({
+            pathname: '/call/[id]',
+            params: {
+              id: message.senderId,
+              friendId: message.senderId,
+              friendName: message.senderName || 'Unknown',
+              friendAvatar: message.senderAvatar,
+              isIncoming: 'true',
+              isVideo: isVideoCall ? 'true' : 'false',
+            }
           });
         }
       };

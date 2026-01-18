@@ -8,18 +8,16 @@ import {
   Platform,
   ScrollView,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useRouter } from 'expo-router';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../services/supabase';
-import { MainStackParamList } from '../navigation/MainNavigator';
 import { useAppTheme } from '../context/FeatureFlagContext';
 import { Button, TextField, Tile, AppBar } from '../components';
 
 export const ProfileScreen = () => {
   const { user, profile, refreshProfile, signOut } = useAuth();
   const { theme } = useAppTheme();
-  const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
+  const router = useRouter();
   const [username, setUsername] = useState('');
   const [fullName, setFullName] = useState('');
   const [loading, setLoading] = useState(false);
@@ -79,7 +77,7 @@ export const ProfileScreen = () => {
       style={{ flex: 1, backgroundColor: theme.background }}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <AppBar title="Profile" isNative={false} showBackButton={false} />
+      <AppBar title="Profile" isNative={true} showBackButton={false} />
       <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
             <View style={[styles.avatarContainer, { backgroundColor: (theme as any).secondaryContainer || theme.border, borderColor: theme.tint }]}>
@@ -126,7 +124,7 @@ export const ProfileScreen = () => {
           <Tile 
             title="Settings" 
             icon="cog-outline" 
-            onPress={() => navigation.navigate('Settings')} 
+            onPress={() => router.push('/settings')} 
           />
 
           <View style={[styles.separator, { backgroundColor: theme.border }]} />

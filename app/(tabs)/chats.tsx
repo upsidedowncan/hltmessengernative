@@ -1,12 +1,12 @@
 import React, { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl } from 'react-native';
-import { useFocusEffect, useNavigation } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { MainStackParamList } from '../navigation/MainNavigator';
-import { supabase } from '../services/supabase';
-import { useAuth } from '../context/AuthContext';
-import { useAppTheme } from '../context/FeatureFlagContext';
-import { AppBar } from '../components/AppBar';
+import { useFocusEffect } from '@react-navigation/native';
+import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { supabase } from '../../src/services/supabase';
+import { useAuth } from '../../src/context/AuthContext';
+import { useAppTheme } from '../../src/context/FeatureFlagContext';
+import { AppBar } from '../../src/components/AppBar';
 
 type ChatPreview = {
   friend_id: string;
@@ -27,10 +27,11 @@ const Avatar = ({ name }: { name: string }) => {
   );
 };
 
-export const ChatScreen = () => {
+export default function ChatScreen() {
   const { user } = useAuth();
   const { theme } = useAppTheme();
-  const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
   
   const [chats, setChats] = useState<ChatPreview[]>([]);
   const [loading, setLoading] = useState(true);
@@ -57,10 +58,14 @@ export const ChatScreen = () => {
   );
 
   const openChat = (item: ChatPreview) => {
-    navigation.navigate('SingleChat', {
-      friendId: item.friend_id,
-      friendName: item.full_name || item.username,
-      friendAvatar: item.avatar_url || undefined,
+    router.push({
+      pathname: '/chat/[id]',
+      params: {
+        id: item.friend_id,
+        friendId: item.friend_id,
+        friendName: item.full_name || item.username,
+        friendAvatar: item.avatar_url || undefined,
+      }
     });
   };
 
@@ -77,11 +82,11 @@ export const ChatScreen = () => {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
-      <AppBar title="Chats" isNative={false} showBackButton={false} />
+      <AppBar title="Chats" isNative={true} showBackButton={false} />
       <FlatList
         data={chats}
         keyExtractor={item => item.friend_id}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 10 }]}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchChats(); }} tintColor={theme.tint} />
         }

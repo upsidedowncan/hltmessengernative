@@ -12,13 +12,13 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../src/context/AuthContext';
 import { supabase } from '../../src/services/supabase';
-import { useAppTheme } from '../../src/context/FeatureFlagContext';
+import { useTheme } from '../../src/context/ThemeContext';
 import { TextField, Tile, AppBar } from '../../src/components';
-import { Button, CircularProgress } from '@expo/ui/swift-ui';
+import { Button, Host } from '@expo/ui/swift-ui';
 
 export default function ProfileScreen() {
   const { user, profile, refreshProfile, signOut } = useAuth();
-  const { theme } = useAppTheme();
+  const { theme } = useTheme();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [username, setUsername] = useState('');
@@ -114,14 +114,14 @@ export default function ProfileScreen() {
           <Text style={{ color: theme.tabIconDefault, fontSize: 12, marginTop: -8, marginBottom: 8, marginLeft: 4 }}>
             Unique identifier for friends to find you.
           </Text>
-
-          <Button
-            variant="default"
+            <Host style={{ width: '100%' }}>
+            <Button
             onPress={handleUpdateProfile}
             disabled={loading}
-          >
-            {[loading ? <CircularProgress key="progress" elementColors={{ trackColor: '#cccccc' }} /> : 'Update Profile']}
-          </Button>
+            variant="glassProminent"
+            >Update Profile</Button>
+            </Host>
+          
           <View style={[styles.separator, { backgroundColor: theme.border }]} />
 
           <Tile

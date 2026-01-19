@@ -14,7 +14,7 @@ import {
 import { useRouter } from 'expo-router';
 import { supabase } from '../../src/services/supabase';
 import { Ionicons } from '@expo/vector-icons';
-import { useAppTheme } from '../../src/context/FeatureFlagContext';
+import { useTheme } from '../../src/context/ThemeContext';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -22,7 +22,7 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   
-  const { theme } = useAppTheme();
+  const { theme } = useTheme();
 
   const handleLogin = async () => {
     if (!email || !password) {

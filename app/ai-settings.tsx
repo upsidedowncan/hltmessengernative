@@ -17,12 +17,12 @@ import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { AIService, AISettings, DEFAULT_AI_SETTINGS } from '../src/services/AIService';
-import { useAppTheme } from '../src/context/FeatureFlagContext';
+import { useTheme } from '../src/context/ThemeContext';
 import { AppBar } from '../src/components/AppBar';
 
 export default function AISettingsScreen() {
   const navigation = useNavigation();
-  const { theme, isDarkMode } = useAppTheme();
+  const { theme, isDarkMode } = useTheme();
   const insets = useSafeAreaInsets();
 
   const [settings, setSettings] = useState<AISettings>(DEFAULT_AI_SETTINGS);

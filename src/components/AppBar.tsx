@@ -2,7 +2,7 @@ import React, { useLayoutEffect } from 'react';
 import { View, Platform, TextStyle, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Appbar } from 'react-native-paper';
-import { useAppTheme } from '../context/FeatureFlagContext';
+import { useTheme } from '../context/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface AppBarProps {
@@ -50,7 +50,7 @@ export const AppBar: React.FC<AppBarProps> = ({
   isNative = true,
 }) => {
   const navigation = useNavigation();
-  const { theme } = useAppTheme();
+  const { theme } = useTheme();
   const insets = useSafeAreaInsets();
 
   const activeTintColor = tintColor || theme.tint;

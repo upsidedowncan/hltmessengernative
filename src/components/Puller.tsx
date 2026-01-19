@@ -15,7 +15,7 @@ import Animated, {
   runOnJS,
 } from 'react-native-reanimated';
 import { GestureDetector, Gesture } from 'react-native-gesture-handler';
-import { useAppTheme } from '../context/FeatureFlagContext';
+import { useTheme } from '../context/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface PullerProps {
@@ -39,7 +39,7 @@ export const Puller = forwardRef<PullerRef, PullerProps>(({
   onStateChange,
   position = 'bottom'
 }, ref) => {
-  const { theme } = useAppTheme();
+  const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   
   const [baseHeight, setBaseHeight] = useState(0);

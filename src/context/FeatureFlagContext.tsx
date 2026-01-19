@@ -1,7 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { useColorScheme } from 'react-native';
 import { featureFlagService } from '../services/FeatureFlagService';
-import { Colors } from '../constants/Colors';
 
 interface FeatureFlagContextType {
   isEnabled: (key: string) => boolean;
@@ -64,26 +62,4 @@ export const useFeatureFlags = () => {
     throw new Error('useFeatureFlags must be used within a FeatureFlagProvider');
   }
   return context;
-};
-
-export const useAppTheme = () => {
-  const { isEnabled, getValue } = useFeatureFlags();
-  const systemColorScheme = useColorScheme();
-  
-  const isTrainMode = isEnabled('TRAIN_MODE');
-  const isDarkMode = isTrainMode || isEnabled('EXPERIMENTAL_DARK_MODE') || systemColorScheme === 'dark';
-  
-  const theme = { ...Colors[isDarkMode ? 'dark' : 'light'] };
-  
-  // Apply Accent Color override
-  const accentOverride = getValue('ACCENT_COLOR');
-  if (accentOverride) {
-      theme.tint = accentOverride;
-  }
-
-  return {
-    isDarkMode,
-    theme,
-    systemColorScheme,
-  };
 };

@@ -13,11 +13,11 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '../../src/services/supabase';
-import { useAppTheme } from '../../src/context/FeatureFlagContext';
+import { useTheme } from '../../src/context/ThemeContext';
 
 export default function ForgotPasswordScreen() {
   const router = useRouter();
-  const { theme } = useAppTheme();
+  const { theme } = useTheme();
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
 

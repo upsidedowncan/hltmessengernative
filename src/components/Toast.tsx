@@ -7,7 +7,7 @@ import {
   Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useAppTheme } from '../context/FeatureFlagContext';
+import { useTheme } from '../context/ThemeContext';
 import Animated, { 
   useSharedValue, 
   useAnimatedStyle, 
@@ -38,7 +38,7 @@ interface ToastProps {
 }
 
 export const Toast: React.FC<ToastProps> = ({ data, onDismiss }) => {
-  const { theme, isDarkMode } = useAppTheme();
+  const { theme, isDarkMode } = useTheme();
   const insets = useSafeAreaInsets();
   
   const translateY = useSharedValue(100);

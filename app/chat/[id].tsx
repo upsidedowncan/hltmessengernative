@@ -46,7 +46,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { supabase } from '../../src/services/supabase';
 import { useAuth } from '../../src/context/AuthContext';
-import { useAppTheme, useFeatureFlags } from '../../src/context/FeatureFlagContext';
+import { useTheme, useFeatureFlags } from '../../src/context/ThemeContext';
 import { useCall } from '../../src/context/CallContext';
 import { callService } from '../../src/services/CallService';
 import { AppBar } from '../../src/components/AppBar';
@@ -89,7 +89,7 @@ export default function SingleChatScreen() {
   const friendAvatar = params.friendAvatar as string | undefined;
 
   const { user, profile } = useAuth();
-  const { theme, isDarkMode } = useAppTheme();
+  const { theme, isDarkMode } = useTheme();
   const { sendNotification } = useSendNotification();
   const { isEnabled } = useFeatureFlags();
   const { setIsCallInProgress } = useCall() as any;

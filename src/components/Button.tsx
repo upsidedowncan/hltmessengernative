@@ -2,7 +2,7 @@ import React from 'react';
 import { StyleSheet, ViewStyle, TextStyle, View } from 'react-native';
 import { Button as PaperButton } from 'react-native-paper';
 import { Ionicons } from '@expo/vector-icons';
-import { useAppTheme } from '../context/FeatureFlagContext';
+import { useTheme } from '../context/ThemeContext';
 
 export type ButtonType = 'primary' | 'secondary' | 'outline' | 'ghost';
 export type ButtonSize = 'small' | 'medium' | 'large';
@@ -38,7 +38,7 @@ export const Button: React.FC<ButtonProps> = ({
   style,
   textStyle,
 }) => {
-  const { theme } = useAppTheme();
+  const { theme } = useTheme();
 
   // Map custom types to Paper modes
   let mode: 'text' | 'outlined' | 'contained' | 'elevated' | 'contained-tonal' = 'contained';

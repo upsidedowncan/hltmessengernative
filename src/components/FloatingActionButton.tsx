@@ -1,7 +1,7 @@
 import React from 'react';
 import { TouchableOpacity, StyleSheet, ViewStyle, Platform, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useAppTheme } from '../context/FeatureFlagContext';
+import { useTheme } from '../context/ThemeContext';
 
 interface FloatingActionButtonProps {
   onPress: () => void;
@@ -16,7 +16,7 @@ export const FloatingActionButton: React.FC<FloatingActionButtonProps> = ({
   style,
   color 
 }) => {
-  const { theme } = useAppTheme();
+  const { theme } = useTheme();
   const fabColor = color || theme.tint;
 
   return (

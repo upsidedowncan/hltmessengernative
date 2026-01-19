@@ -1,6 +1,6 @@
 import React from 'react';
 import { Switch as PaperSwitch } from 'react-native-paper';
-import { useAppTheme } from '../context/FeatureFlagContext';
+import { useTheme } from '../context/ThemeContext';
 
 interface SwitchProps {
   value: boolean;
@@ -16,7 +16,7 @@ export const Switch: React.FC<SwitchProps> = ({
   onValueChange, 
   disabled = false,
 }) => {
-  const { theme } = useAppTheme();
+  const { theme } = useTheme();
 
   return (
     <PaperSwitch

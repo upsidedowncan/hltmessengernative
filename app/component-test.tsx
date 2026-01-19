@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { ScrollView, View, Text, StyleSheet, Alert } from 'react-native';
-import { useAppTheme } from '../src/context/FeatureFlagContext';
+import { useTheme } from '../src/context/ThemeContext';
 import { AppBar } from '../src/components';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { 
@@ -16,7 +16,7 @@ import {
 } from '@expo/ui/jetpack-compose';
 
 const SectionTitle = ({ children }: { children: string }) => {
-  const { theme } = useAppTheme();
+  const { theme } = useTheme();
   return (
     <Text style={[
       styles.sectionTitle, 
@@ -35,7 +35,7 @@ const SectionTitle = ({ children }: { children: string }) => {
 };
 
 export default function ComponentTestScreen() {
-  const { theme } = useAppTheme();
+  const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   
   // State

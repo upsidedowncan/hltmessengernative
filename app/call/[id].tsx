@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, Dimensions, Tou
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { callService } from '../../src/services/CallService';
 import { useAuth } from '../../src/context/AuthContext';
-import { useAppTheme } from '../../src/context/FeatureFlagContext';
+import { useTheme } from '../../src/context/ThemeContext';
 import { useCall } from '../../src/context/CallContext';
 import { Audio } from 'expo-av';
 import Animated, { 
@@ -153,7 +153,7 @@ export default function CallScreen() {
   const initialIsVideo = params.isVideo === 'true';
   const isVideo = initialIsVideo;
 
-  const { theme } = useAppTheme();
+  const { theme } = useTheme();
   const { profile: userProfile } = useAuth();
   const { setIsCallInProgress } = useCall() as any;
   

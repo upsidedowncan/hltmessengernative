@@ -39,7 +39,7 @@ import { WebView } from 'react-native-webview';
 import { Audio } from 'expo-av';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import { useAppTheme } from '../../src/context/FeatureFlagContext';
+import { useTheme } from '../../src/context/ThemeContext';
 import { AppBar } from '../../src/components/AppBar';
 import { supabase } from '../../src/services/supabase';
 import { AIService, AISettings, DEFAULT_AI_SETTINGS } from '../../src/services/AIService';
@@ -112,7 +112,7 @@ const VisualizationEmbed = React.memo(({ content }: { content: string }) => {
 
 const ReasoningAccordion = ({ content, isRunning, onToggle }: { content: string, isRunning?: boolean, onToggle?: () => void }) => {
   const [expanded, setExpanded] = useState(isRunning || false);
-  const { theme } = useAppTheme();
+  const { theme } = useTheme();
   const [measuredHeight, setMeasuredHeight] = useState(0);
 
   useEffect(() => {
@@ -172,7 +172,7 @@ const ReasoningAccordion = ({ content, isRunning, onToggle }: { content: string,
 };
 
 const ImageGenerationBlock = React.memo(({ content }: { content: string }) => {
-  const { theme } = useAppTheme();
+  const { theme } = useTheme();
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [params, setParams] = useState<{ prompt: string, model: string } | null>(null);
@@ -278,7 +278,7 @@ const SyntaxHighlighter = React.memo(({ code }: { code: string }) => {
 });
 
 const PythonExecutionBlock = React.memo(({ content, isLastMessage, onExecutionComplete, onToggle }: { content: string, isLastMessage: boolean, onExecutionComplete: (output: string) => void, onToggle?: () => void }) => {
-  const { theme } = useAppTheme();
+  const { theme } = useTheme();
   const [data, setData] = useState<{ code: string, filename?: string, output?: string, status?: 'running' | 'success' | 'error' } | null>(null);
   const [generatedFiles, setGeneratedFiles] = useState<{name: string, url: string, type: 'image' | 'file'}[]>([]);
   const [executing, setExecuting] = useState(false);
@@ -531,7 +531,7 @@ const MessageItem = React.memo(({
   isLastMessage: boolean,
   onContentChange?: () => void
 }) => {
-  const { theme, isDarkMode } = useAppTheme();
+  const { theme, isDarkMode } = useTheme();
   const isMe = item.sender_id === 'user';
   const scale = useSharedValue(1);
 
@@ -798,7 +798,7 @@ export default function AIChatScreen() {
   const params = useLocalSearchParams();
   const conversationId = params.conversationId as string;
   const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
-  const { theme, isDarkMode } = useAppTheme();
+  const { theme, isDarkMode } = useTheme();
   const [fullScreenHtml, setFullScreenHtml] = useState<string | null>(null);
   const [isLimitReached, setIsLimitReached] = useState(false);
   const [playingMessageId, setPlayingMessageId] = useState<string | null>(null);

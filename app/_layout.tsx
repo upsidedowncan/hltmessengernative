@@ -7,16 +7,18 @@ import { StatusBar } from 'expo-status-bar';
 import { ThemeProvider, DarkTheme, DefaultTheme } from '@react-navigation/native';
 
 import { AuthProvider, useAuth } from '../src/context/AuthContext';
-import { FeatureFlagProvider, useAppTheme } from '../src/context/FeatureFlagContext';
+import { FeatureFlagProvider, useFeatureFlags } from '../src/context/FeatureFlagContext';
+import { ThemeProvider as CustomThemeProvider, useTheme } from '../src/context/ThemeContext';
 import { CallProvider } from '../src/context/CallContext';
 import { ToastProvider } from '../src/context/ToastContext';
 import { useDeepLinkHandler } from '../src/hooks/useDeepLinkHandler';
+import { HostWrapper } from '../src/components/ui/HostWrapper';
 
 function AuthProtection() {
   const { session, loading, profile } = useAuth();
   const segments = useSegments();
   const router = useRouter();
-  const { theme } = useAppTheme();
+  const { theme } = useTheme();
   useDeepLinkHandler();
 
   useEffect(() => {
@@ -26,21 +28,15 @@ function AuthProtection() {
     
     if (!session) {
       if (!inAuthGroup) {
-        // Redirect to login if not authenticated and not already in auth group
         router.replace('/(auth)/login');
       }
     } else {
-        // User is logged in
         if (profile && !profile.username) {
-            // If profile setup is needed
-             // Check if we are already there to avoid loop? 
-             // segments[0] might be 'profile-setup'
-             const inProfileSetup = segments[0] === 'profile-setup';
-             if (!inProfileSetup) {
-                 router.replace('/profile-setup');
-             }
+              const inProfileSetup = segments[0] === 'profile-setup';
+              if (!inProfileSetup) {
+                  router.replace('/profile-setup');
+              }
         } else if (inAuthGroup) {
-            // Redirect away from auth screens if logged in
             router.replace('/(tabs)/chats');
         }
     }
@@ -58,7 +54,15 @@ function AuthProtection() {
 }
 
 function ThemeWrapper() {
-    const { isDarkMode } = useAppTheme();
+    const { isDarkMode, theme: baseTheme } = useTheme();
+    const { getValue } = useFeatureFlags();
+    
+    const theme = { ...baseTheme };
+    const accentOverride = getValue('ACCENT_COLOR');
+    if (accentOverride) {
+        theme.tint = accentOverride;
+    }
+
     return (
         <ThemeProvider value={isDarkMode ? DarkTheme : DefaultTheme}>
             <StatusBar style={isDarkMode ? 'light' : 'dark'} />
@@ -70,17 +74,19 @@ function ThemeWrapper() {
 export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <AuthProvider>
-        <FeatureFlagProvider>
-             <ToastProvider>
-                <CallProvider>
-                  <SafeAreaProvider>
-                    <ThemeWrapper />
-                  </SafeAreaProvider>
-                </CallProvider>
-             </ToastProvider>
-        </FeatureFlagProvider>
-      </AuthProvider>
+        <AuthProvider>
+          <CustomThemeProvider>
+            <FeatureFlagProvider>
+                 <ToastProvider>
+                    <CallProvider>
+                      <SafeAreaProvider>
+                        <ThemeWrapper />
+                      </SafeAreaProvider>
+                    </CallProvider>
+                 </ToastProvider>
+            </FeatureFlagProvider>
+          </CustomThemeProvider>
+        </AuthProvider>
     </GestureHandlerRootView>
   );
 }

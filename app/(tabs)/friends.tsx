@@ -16,7 +16,7 @@ import { useAuth } from '../../src/context/AuthContext';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useAppTheme } from '../../src/context/FeatureFlagContext';
+import { useTheme } from '../../src/context/ThemeContext';
 import { AppBar } from '../../src/components/AppBar';
 
 type Profile = {
@@ -45,7 +45,7 @@ const Avatar = ({ name }: { name: string }) => {
 
 export default function FriendsScreen() {
   const { user } = useAuth();
-  const { theme } = useAppTheme();
+  const { theme } = useTheme();
   const router = useRouter();
   const insets = useSafeAreaInsets();
 

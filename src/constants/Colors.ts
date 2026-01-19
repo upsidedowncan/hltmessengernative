@@ -10,6 +10,11 @@ export const Colors = {
     cardBackground: '#fff',
     secondaryContainer: 'rgba(0, 0, 0, 0.05)', // Minimalist light gray
     onSecondaryContainer: '#000',
+    // Material 3 - Light surface colors for navbar
+    navbarBackground: '#FFFFFF',
+    navbarIconDefault: '#667781',
+    navbarIconSelected: '#007AFF',
+    navbarRipple: 'rgba(0, 122, 255, 0.12)',
   },
   dark: {
     text: '#fff',
@@ -22,5 +27,10 @@ export const Colors = {
     cardBackground: '#111',
     secondaryContainer: 'rgba(255, 255, 255, 0.1)', // Minimalist dark gray
     onSecondaryContainer: '#fff',
+    // Material 3 - Dark surface colors for navbar (tinted, not pure black)
+    navbarBackground: '#2D2D2D',
+    navbarIconDefault: '#A0ACB1',
+    navbarIconSelected: '#82B1FF',
+    navbarRipple: 'rgba(130, 177, 255, 0.12)',
   },
 };

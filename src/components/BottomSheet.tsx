@@ -15,7 +15,7 @@ import Animated, {
   runOnJS,
 } from 'react-native-reanimated';
 import { GestureDetector, Gesture } from 'react-native-gesture-handler';
-import { useAppTheme } from '../context/FeatureFlagContext';
+import { useTheme } from '../context/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -40,7 +40,7 @@ export const BottomSheet = forwardRef<BottomSheetRef, BottomSheetProps>(({
   onClose,
   maxHeight
 }, ref) => {
-  const { theme } = useAppTheme();
+  const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   
   const [contentHeight, setContentHeight] = useState(0);

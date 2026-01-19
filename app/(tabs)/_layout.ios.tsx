@@ -1,24 +1,12 @@
 import { NativeTabs, Icon, Label, VectorIcon } from 'expo-router/unstable-native-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../src/context/ThemeContext';
-import { SafeAreaView } from 'react-native-safe-area-context'
 
 export default function TabLayout() {
   const { theme } = useTheme();
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: theme.background }}>
     <NativeTabs
-      backgroundColor={theme.navbarBackground}
-      iconColor={{
-        default: theme.navbarIconDefault,
-        selected: theme.navbarIconSelected,
-      }}
-      tintColor={theme.navbarIconSelected}
-      rippleColor={theme.navbarRipple}
-      labelStyle={{
-        color: theme.navbarIconDefault,
-      }}
     >
       <NativeTabs.Trigger name="chats">
         <Label>Chats</Label>
@@ -52,6 +40,5 @@ export default function TabLayout() {
         }} />
       </NativeTabs.Trigger>
     </NativeTabs>
-    </SafeAreaView>
   );
 }

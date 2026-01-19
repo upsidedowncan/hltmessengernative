@@ -12,7 +12,7 @@ import {
   Animated as RNAnimated,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useAppTheme } from '../context/FeatureFlagContext';
+import { useTheme } from '../context/ThemeContext';
 import Animated, { 
   useAnimatedStyle, 
   withTiming, 
@@ -49,7 +49,7 @@ export const TextField: React.FC<TextFieldProps> = ({
   groupPosition = 'none',
   ...props
 }) => {
-  const { theme } = useAppTheme();
+  const { theme } = useTheme();
   const [isFocused, setIsFocused] = useState(false);
   const [isPasswordVisible, setIsPasswordVisible] = useState(!secureTextEntry);
   

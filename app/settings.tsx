@@ -1,14 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useAppTheme } from '../src/context/FeatureFlagContext';
+import { useTheme, ThemeMode } from '../src/context/ThemeContext';
 import { Button, Tile, ProfileHeader, AppBar } from '../src/components';
 import { useAuth } from '../src/context/AuthContext';
 import { NotificationSetup } from '../src/components/NotificationSetup';
 import { supabase } from '../src/services/supabase';
+import { Switch } from '@expo/ui/swift-ui';
 
 export default function SettingsScreen() {
-  const { theme } = useAppTheme();
+  const { theme, themeMode, setThemeMode } = useTheme();
   const { signOut, profile, refreshProfile, user } = useAuth();
   const router = useRouter();
 
@@ -84,11 +85,43 @@ export default function SettingsScreen() {
 
       <View style={styles.section}>
         <Text style={[styles.sectionTitle, { color: theme.text }]}>General</Text>
-        <Tile
-          title="Notifications"
-          icon="notifications-outline"
-          onPress={() => {}}
-        />
+        <View style={styles.groupContainer}>
+          <Tile
+            title="Notifications"
+            icon="notifications-outline"
+            onPress={() => {}}
+            groupPosition="top"
+          />
+          <Tile
+            title="Dark Mode"
+            icon="moon-outline"
+            onPress={() => setThemeMode(themeMode === 'dark' ? 'light' : 'dark')}
+            groupPosition="middle"
+            rightElement={
+              <Switch
+                value={themeMode === 'dark'}
+                onValueChange={(val) => setThemeMode(val ? 'dark' : 'light')}
+                color={theme.tint}
+                variant="switch"
+              />
+            }
+          />
+          <Tile
+            title="Use System Theme"
+            icon="phone-portrait-outline"
+            onPress={() => setThemeMode(themeMode === 'system' ? 'light' : 'system')}
+            groupPosition="bottom"
+            rightElement={
+              <Switch
+                value={themeMode === 'system'}
+                onValueChange={(val) => setThemeMode(val ? 'system' : 'light')}
+                color={theme.tint}
+                variant="switch"
+              />
+            }
+            chevron={false}
+          />
+        </View>
         <View style={{ paddingHorizontal: 24 }}>
           <NotificationSetup />
         </View>

@@ -5,7 +5,7 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '../../src/services/supabase';
 import { useAuth } from '../../src/context/AuthContext';
-import { useAppTheme } from '../../src/context/FeatureFlagContext';
+import { useTheme } from '../../src/context/ThemeContext';
 import { AppBar } from '../../src/components/AppBar';
 
 type ChatPreview = {
@@ -29,7 +29,7 @@ const Avatar = ({ name }: { name: string }) => {
 
 export default function ChatScreen() {
   const { user } = useAuth();
-  const { theme } = useAppTheme();
+  const { theme } = useTheme();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   

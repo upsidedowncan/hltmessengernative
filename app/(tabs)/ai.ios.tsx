@@ -3,13 +3,13 @@ import { View, Text, StyleSheet, FlatList, RefreshControl, Alert } from 'react-n
 import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useAppTheme } from '../../src/context/FeatureFlagContext';
+import { useTheme } from '../../src/context/ThemeContext';
 import { AIService, AIConversation } from '../../src/services/AIService';
 import { ChatListElement } from '../../src/components/ChatListElement';
 import { Button, Host } from '@expo/ui/swift-ui';
 
 export default function AIChatListScreen() {
-  const { theme } = useAppTheme();
+  const { theme } = useTheme();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [conversations, setConversations] = useState<AIConversation[]>([]);
@@ -65,34 +65,36 @@ export default function AIChatListScreen() {
   );
 
   return (
-    <Host style={{ flex: 1, backgroundColor: theme.background }}>
-      <FlatList
-        data={conversations}
-        keyExtractor={item => item.id}
-        renderItem={renderItem}
-        contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 100 }]}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); loadConversations(); }} tintColor={theme.tint} />}
-        ListEmptyComponent={!loading ? <View style={styles.empty}><Text style={{ color: theme.tabIconDefault }}>No chats yet. Start one!</Text></View> : null}
-      />
-      <View style={[styles.fabContainer, { bottom: insets.bottom + 20 }]}>
-        <Button
-          variant="default"
-          onPress={handleCreateNew}
-        >
-          New Chat
-        </Button>
+      <View style={{ flex: 1, backgroundColor: '#000' }}>
+        <FlatList
+          data={conversations}
+          keyExtractor={item => item.id}
+          renderItem={renderItem}
+          contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 100 }]}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); loadConversations(); }} tintColor={theme.tint} />}
+          ListEmptyComponent={!loading ? <View style={styles.empty}><Text style={{ color: theme.tabIconDefault }}>No chats yet. Start one!</Text></View> : null}
+        />
+        <View style={[styles.fabContainer, { bottom: insets.bottom + 20 }]}>
+          <Host>
+          <Button
+            onPress={handleCreateNew}
+            variant="glass"
+          >
+          Create New
+          </Button>
+          </Host>
+        </View>
       </View>
-    </Host>
-  );
-};
+    );
+  };
 
-const styles = StyleSheet.create({
-  listContent: { paddingBottom: 100, paddingTop: 60 },
-  empty: { alignItems: 'center', marginTop: 50 },
-  fabContainer: {
-    position: 'absolute',
-    left: 20,
-    right: 20,
-    height: 50,
-  }
+  const styles = StyleSheet.create({
+    listContent: { paddingBottom: 100, paddingTop: 60 },
+    empty: { alignItems: 'center', marginTop: 50 },
+    fabContainer: {
+      position: 'absolute',
+      left: 20,
+      right: 20,
+      height: 50,
+    }
 });

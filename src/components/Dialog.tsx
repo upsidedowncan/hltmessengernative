@@ -9,7 +9,7 @@ import {
   Pressable,
   Alert,
 } from 'react-native';
-import { useAppTheme } from '../context/FeatureFlagContext';
+import { useTheme } from '../context/ThemeContext';
 import Animated, { 
   useSharedValue, 
   useAnimatedStyle, 
@@ -44,7 +44,7 @@ export const Dialog: React.FC<DialogProps> = ({
   onClose,
   forceCustom = false,
 }) => {
-  const { theme } = useAppTheme();
+  const { theme } = useTheme();
   const [shouldRender, setShouldRender] = useState(visible);
   
   const opacity = useSharedValue(0);

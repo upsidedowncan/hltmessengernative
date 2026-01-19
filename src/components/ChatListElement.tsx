@@ -8,7 +8,7 @@ import {
   Dimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useAppTheme } from '../context/FeatureFlagContext';
+import { useTheme } from '../context/ThemeContext';
 import Animated, { 
   useSharedValue, 
   useAnimatedStyle, 
@@ -46,7 +46,7 @@ export const ChatListElement: React.FC<ChatListElementProps> = ({
   onDelete,
   onArchive,
 }) => {
-  const { theme } = useAppTheme();
+  const { theme } = useTheme();
   const isAndroid = Platform.OS === 'android';
   
   const translateX = useSharedValue(0);

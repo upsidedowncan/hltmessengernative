@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, useColorScheme, ScrollView, Switch, Platform, Button, TextInput } from 'react-native';
-import { useFeatureFlags, useAppTheme } from '../src/context/FeatureFlagContext';
+import { useFeatureFlags, useTheme } from '../src/context/ThemeContext';
 import { callService } from '../src/services/CallService';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { 
@@ -11,7 +11,7 @@ import Animated, {
 
 export default function DevSettingsScreen() {
   const { debugInfo, setOverride, reloadFlags, isLoading } = useFeatureFlags();
-  const { theme, isDarkMode } = useAppTheme();
+  const { theme, isDarkMode } = useTheme();
   const [expandedKey, setExpandedKey] = useState<string | null>(null);
   const [customInput, setCustomInput] = useState('');
 

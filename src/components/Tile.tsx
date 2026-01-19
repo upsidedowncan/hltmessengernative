@@ -8,7 +8,7 @@ import {
   Pressable,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useAppTheme } from '../context/FeatureFlagContext';
+import { useTheme } from '../context/ThemeContext';
 
 export type TileGroupPosition = 'top' | 'middle' | 'bottom' | 'none';
 
@@ -37,7 +37,7 @@ export const Tile: React.FC<TileProps> = ({
   chevron = true,
   style,
 }) => {
-  const { theme, isDarkMode } = useAppTheme();
+  const { theme, isDarkMode } = useTheme();
   const isAndroid = Platform.OS === 'android';
 
   const getBorderRadii = () => {

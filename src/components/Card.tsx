@@ -9,7 +9,7 @@ import {
   ImageSourcePropType,
 } from 'react-native';
 import { Image } from 'expo-image';
-import { useAppTheme } from '../context/FeatureFlagContext';
+import { useTheme } from '../context/ThemeContext';
 
 interface CardProps {
   title?: string;
@@ -36,7 +36,7 @@ export const Card: React.FC<CardProps> = ({
   children,
   elevated = true,
 }) => {
-  const { theme, isDarkMode } = useAppTheme();
+  const { theme, isDarkMode } = useTheme();
   const isIOS = Platform.OS === 'ios';
 
   const Container = onPress ? TouchableOpacity : View;

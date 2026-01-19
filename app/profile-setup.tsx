@@ -12,11 +12,11 @@ import {
 } from 'react-native';
 import { useAuth } from '../src/context/AuthContext';
 import { supabase } from '../src/services/supabase';
-import { useAppTheme } from '../src/context/FeatureFlagContext';
+import { useTheme } from '../src/context/ThemeContext';
 
 export default function ProfileSetupScreen() {
   const { user, refreshProfile, signOut } = useAuth();
-  const { theme } = useAppTheme();
+  const { theme } = useTheme();
   const [username, setUsername] = useState('');
   const [fullName, setFullName] = useState('');
   const [loading, setLoading] = useState(false);

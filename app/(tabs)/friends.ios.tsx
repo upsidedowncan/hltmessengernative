@@ -17,7 +17,7 @@ import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../src/context/ThemeContext';
-import { AppBar } from '../../src/components/AppBar';
+import { List } from '@expo/ui/swift-ui';
 
 type Profile = {
   id: string;
@@ -37,8 +37,8 @@ type Friendship = {
 const Avatar = ({ name }: { name: string }) => {
   const initials = name ? name.substring(0, 2).toUpperCase() : '??';
   return (
-    <View style={[styles.avatar, { backgroundColor: '#333' }]}>
-      <Text style={[styles.avatarText, { color: '#fff' }]}>{initials}</Text>
+    <View style={[styles.avatar, { backgroundColor: '#007AFF' }]}>
+      <Text style={styles.avatarText}>{initials}</Text>
     </View>
   );
 };
@@ -52,7 +52,7 @@ export default function FriendsScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<Profile[]>([]);
   const [isSearching, setIsSearching] = useState(false);
-  
+
   const [friends, setFriends] = useState<Friendship[]>([]);
   const [requests, setRequests] = useState<Friendship[]>([]);
   const [loading, setLoading] = useState(true);
@@ -92,7 +92,7 @@ export default function FriendsScreen() {
           avatar_url: f.avatar_url
         }
       }));
-      
+
       setFriends(mappedFriends);
       setRequests(mappedRequests);
 
@@ -186,8 +186,8 @@ export default function FriendsScreen() {
   };
 
   const renderFriendItem = ({ item }: { item: Friendship }) => (
-    <TouchableOpacity 
-      style={styles.itemContainer} 
+    <TouchableOpacity
+      style={styles.itemContainer}
       activeOpacity={0.7}
       onLongPress={() => handleRemoveFriend(item.id, item.friend_profile?.full_name || item.friend_profile?.username || 'User')}
       onPress={() => openChat(item.friend_profile!.id, item.friend_profile!.full_name, item.friend_profile?.avatar_url || null)}
@@ -201,8 +201,8 @@ export default function FriendsScreen() {
             @{item.friend_profile?.username}
         </Text>
       </View>
-      <TouchableOpacity 
-        style={[styles.iconButton, { backgroundColor: '#222' }]}
+      <TouchableOpacity
+        style={[styles.iconButton]}
         onPress={() => openChat(item.friend_profile!.id, item.friend_profile!.full_name, item.friend_profile?.avatar_url || null)}
       >
         <Ionicons name="chatbubble-ellipses-outline" size={20} color={theme.tint} />
@@ -219,7 +219,7 @@ export default function FriendsScreen() {
             {item.friend_profile?.username}
         </Text>
       </View>
-      <TouchableOpacity 
+      <TouchableOpacity
         style={[styles.actionButton, { backgroundColor: theme.tint }]}
         onPress={() => handleAcceptRequest(item.id)}
       >
@@ -235,7 +235,7 @@ export default function FriendsScreen() {
               <Text style={[styles.name, { color: theme.text }]}>{item.full_name}</Text>
               <Text style={[styles.username, { color: theme.tabIconDefault }]}>@{item.username}</Text>
           </View>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={[styles.actionButton, { backgroundColor: theme.tint }]}
             onPress={() => handleAddFriend(item.id)}
           >
@@ -246,13 +246,11 @@ export default function FriendsScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
-      <AppBar title="People" isNative={false} showBackButton={false} />
-      {/* Header Search */}
       <View style={[styles.header, { borderBottomColor: theme.border }]}>
           <View style={[styles.searchBar, { backgroundColor: theme.cardBackground }]}>
               <Ionicons name="search" size={20} color={theme.tabIconDefault} style={{ marginRight: 8 }} />
-              <TextInput 
-                  placeholder="Search by username..." 
+              <TextInput
+                  placeholder="Search by username..."
                   placeholderTextColor={theme.tabIconDefault}
                   style={[styles.searchInput, { color: theme.text }]}
                   value={searchQuery}
@@ -310,7 +308,7 @@ export default function FriendsScreen() {
       />
     </View>
   );
-};
+}
 
 const styles = StyleSheet.create({
   container: {
@@ -320,6 +318,7 @@ const styles = StyleSheet.create({
       paddingVertical: 10,
       paddingHorizontal: 16,
       borderBottomWidth: 1,
+      marginTop: 60,
   },
   searchBar: {
       flexDirection: 'row',
@@ -362,6 +361,7 @@ const styles = StyleSheet.create({
   avatarText: {
     fontSize: 18,
     fontWeight: '600',
+    color: '#fff',
   },
   textContainer: {
     flex: 1,

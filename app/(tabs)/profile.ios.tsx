@@ -4,17 +4,14 @@ import {
   Text,
   StyleSheet,
   Alert,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../src/context/AuthContext';
 import { supabase } from '../../src/services/supabase';
 import { useTheme } from '../../src/context/ThemeContext';
-import { TextField, Tile, AppBar } from '../../src/components';
-import { Button, Host } from '@expo/ui/swift-ui';
+import { TextField } from '../../src/components';
+import { Button, Host, List } from '@expo/ui/swift-ui';
 
 export default function ProfileScreen() {
   const { user, profile, refreshProfile, signOut } = useAuth();
@@ -76,12 +73,11 @@ export default function ProfileScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1, backgroundColor: theme.background }}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <AppBar title="Profile" isNative={false} showBackButton={false} />
-      <ScrollView contentContainerStyle={[styles.container, { paddingBottom: insets.bottom + 80 }]} showsVerticalScrollIndicator={false}>
+    <Host style={{ flex: 1 }}>
+      <List
+        style={{ flex: 1 }}
+        listStyle='insetGrouped'
+      >
         <View style={styles.header}>
           <View style={[styles.avatarContainer, { backgroundColor: (theme as any).secondaryContainer || theme.border, borderColor: theme.tint }]}>
             <Text style={[styles.avatarText, { color: (theme as any).onSecondaryContainer || theme.text }]}>{getInitials()}</Text>
@@ -90,61 +86,46 @@ export default function ProfileScreen() {
           <Text style={[styles.headerSubtitle, { color: theme.tabIconDefault }]}>@{username || 'username'}</Text>
         </View>
 
-        <View style={styles.form}>
-          <View style={styles.groupContainer}>
-            <TextField
-              label="Display Name"
-              value={fullName}
-              onChangeText={setFullName}
-              placeholder="Your Name"
-              leftIcon="person-outline"
-              groupPosition="top"
-            />
-            <TextField
-              label="Username"
-              value={username}
-              onChangeText={(text) => setUsername(text.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
-              placeholder="username"
-              autoCapitalize="none"
-              leftIcon="at-outline"
-              groupPosition="bottom"
-            />
-          </View>
+        <TextField
+          label="Display Name"
+          value={fullName}
+          onChangeText={setFullName}
+          placeholder="Your Name"
+          leftIcon="person-outline"
+        />
+        <TextField
+          label="Username"
+          value={username}
+          onChangeText={(text) => setUsername(text.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
+          placeholder="username"
+          autoCapitalize="none"
+          leftIcon="at-outline"
+        />
 
-          <Text style={{ color: theme.tabIconDefault, fontSize: 12, marginTop: -8, marginBottom: 8, marginLeft: 4 }}>
-            Unique identifier for friends to find you.
-          </Text>
-            <Host style={{ width: '100%' }}>
-            <Button
-            onPress={handleUpdateProfile}
-            disabled={loading}
-            variant="glassProminent"
-            >Update Profile</Button>
-            </Host>
-          
-          <View style={[styles.separator, { backgroundColor: theme.border }]} />
+        <Text style={{ color: theme.tabIconDefault, fontSize: 12, marginVertical: 8, marginLeft: 16 }}>
+          Unique identifier for friends to find you.
+        </Text>
 
-          <Tile
-            title="Settings"
-            icon="cog-outline"
-            onPress={() => router.push('/settings')}
-          />
+        <Button
+          onPress={handleUpdateProfile}
+          disabled={loading}
+          variant="glassProminent"
+        >
+          Update Profile
+        </Button>
 
-          <View style={[styles.separator, { backgroundColor: theme.border }]} />
-
-
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+        <Button
+          onPress={() => router.push('/settings')}
+          systemImage="gear"
+        >
+          Settings
+        </Button>
+      </List>
+    </Host>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flexGrow: 1,
-    padding: 24,
-    paddingBottom: 100,
-  },
   header: {
     alignItems: 'center',
     marginBottom: 32,
@@ -170,17 +151,5 @@ const styles = StyleSheet.create({
   headerSubtitle: {
     fontSize: 16,
     letterSpacing: 0.2,
-  },
-  form: {
-    gap: 16,
-    maxWidth: 500,
-    width: '100%',
-    alignSelf: 'center',
-  },
-  separator: {
-    height: 1,
-    width: '100%',
-    marginVertical: 12,
-    opacity: 0.5,
   },
 });

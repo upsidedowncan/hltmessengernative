@@ -34,6 +34,9 @@ interface ChatListElementProps {
   onPress: () => void;
   onDelete: () => void;
   onArchive: () => void;
+  backgroundColor?: string;
+  textColor?: string;
+  subtitleColor?: string;
 }
 
 export const ChatListElement: React.FC<ChatListElementProps> = ({
@@ -45,9 +48,16 @@ export const ChatListElement: React.FC<ChatListElementProps> = ({
   onPress,
   onDelete,
   onArchive,
+  backgroundColor,
+  textColor,
+  subtitleColor,
 }) => {
   const { theme } = useTheme();
   const isAndroid = Platform.OS === 'android';
+
+  const bgColor = backgroundColor || theme.background;
+  const txtColor = textColor || theme.text;
+  const subColor = subtitleColor || theme.tabIconDefault;
   
   const translateX = useSharedValue(0);
   const context = useSharedValue(0);
@@ -143,9 +153,9 @@ export const ChatListElement: React.FC<ChatListElementProps> = ({
       </View>
 
       <GestureDetector gesture={panGesture}>
-        <Animated.View style={[rRowStyle, { backgroundColor: theme.background }]}>
-          <TouchableOpacity 
-            activeOpacity={1} 
+        <Animated.View style={[rRowStyle, { backgroundColor: bgColor }]}>
+          <TouchableOpacity
+            activeOpacity={1}
             onPress={onPress}
             style={styles.content}
           >
@@ -154,7 +164,7 @@ export const ChatListElement: React.FC<ChatListElementProps> = ({
                 <Image source={{ uri: avatarUrl }} style={styles.avatar} />
               ) : (
                 <View style={[styles.avatarPlaceholder, { backgroundColor: theme.border }]}>
-                  <Text style={[styles.avatarText, { color: theme.tabIconDefault }]}>
+                  <Text style={[styles.avatarText, { color: subColor }]}>
                     {title.substring(0, 1).toUpperCase()}
                   </Text>
                 </View>
@@ -163,18 +173,18 @@ export const ChatListElement: React.FC<ChatListElementProps> = ({
 
             <View style={styles.textContainer}>
               <View style={styles.headerRow}>
-                <Text style={[styles.title, { color: theme.text }]} numberOfLines={1}>
+                <Text style={[styles.title, { color: txtColor }]} numberOfLines={1}>
                   {title}
                 </Text>
                 {time && (
-                  <Text style={[styles.time, { color: theme.tabIconDefault }]}>
+                  <Text style={[styles.time, { color: subColor }]}>
                     {time}
                   </Text>
                 )}
               </View>
-              
+
               <View style={styles.messageRow}>
-                <Text style={[styles.subtitle, { color: theme.tabIconDefault }]} numberOfLines={1}>
+                <Text style={[styles.subtitle, { color: subColor }]} numberOfLines={1}>
                   {subtitle}
                 </Text>
                 {unreadCount > 0 && (
@@ -195,7 +205,6 @@ export const ChatListElement: React.FC<ChatListElementProps> = ({
 const styles = StyleSheet.create({
   container: {
     width: '100%',
-    backgroundColor: '#fff',
   },
   backgroundContent: {
     flex: 1,

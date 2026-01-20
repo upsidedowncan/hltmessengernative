@@ -46,11 +46,13 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { supabase } from '../../src/services/supabase';
 import { useAuth } from '../../src/context/AuthContext';
-import { useTheme, useFeatureFlags } from '../../src/context/ThemeContext';
+import { useTheme } from '../../src/context/ThemeContext';
+import { useFeatureFlags } from '../../src/context/FeatureFlagContext';
 import { useCall } from '../../src/context/CallContext';
 import { callService } from '../../src/services/CallService';
 import { AppBar } from '../../src/components/AppBar';
 import { useSendNotification } from '../../src/hooks/useSendNotification';
+import { DeepLinkUserWidget } from '../../src/components/DeepLinkUserWidget';
 import { Colors } from '../../src/constants/Colors';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -687,6 +689,50 @@ export default function SingleChatScreen() {
       zIndex: (isSelected || isMenuClosing) ? 1000 : 1,
     }));
 
+    const renderContent = (content: string) => {
+        const regex = /(?:^|\s)hlt:\/\/chat\?username=([a-zA-Z0-9_]+)(?:$|\s)/g;
+        const parts = [];
+        let lastIndex = 0;
+        let match;
+
+        while ((match = regex.exec(content)) !== null) {
+            // Add text before the match
+            if (match.index > lastIndex) {
+                parts.push(
+                    <Text key={`text-${lastIndex}`} style={{ color: isMe ? '#fff' : theme.text, fontSize: 16, lineHeight: 22 }}>
+                        {content.substring(lastIndex, match.index)}
+                    </Text>
+                );
+            }
+            // Add the widget
+            parts.push(
+                <View key={`widget-${match.index}`} style={{ marginVertical: 4 }}>
+                    <DeepLinkUserWidget username={match[1]} />
+                </View>
+            );
+            lastIndex = regex.lastIndex;
+        }
+
+        // Add remaining text
+        if (lastIndex < content.length) {
+            parts.push(
+                <Text key={`text-${lastIndex}`} style={{ color: isMe ? '#fff' : theme.text, fontSize: 16, lineHeight: 22 }}>
+                    {content.substring(lastIndex)}
+                </Text>
+            );
+        }
+
+        if (parts.length === 0) {
+             return (
+                <Text style={{ color: isMe ? '#fff' : theme.text, fontSize: 16, lineHeight: 22 }}>
+                  {content}
+                </Text>
+             );
+        }
+
+        return <View>{parts}</View>;
+    };
+
     return (
       <View style={{ marginBottom: isLastInGroup ? 12 : 2, zIndex: (isSelected || isMenuClosing) ? 1000 : 1 }}>
         <TouchableOpacity 
@@ -758,11 +804,7 @@ export default function SingleChatScreen() {
                     ))}
                 </View>
             )}
-            {!!item.content && (
-                <Text style={{ color: isMe ? '#fff' : theme.text, fontSize: 16, lineHeight: 22 }}>
-                  {item.content}
-                </Text>
-            )}
+            {!!item.content && renderContent(item.content)}
           </Animated.View>
         </TouchableOpacity>
 

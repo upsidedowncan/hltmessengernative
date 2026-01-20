@@ -1,10 +1,11 @@
 import { Slot, useRouter, useSegments } from 'expo-router';
 import { useEffect } from 'react';
-import { View, ActivityIndicator } from 'react-native';
+import { View, ActivityIndicator, Platform } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { ThemeProvider, DarkTheme, DefaultTheme } from '@react-navigation/native';
+import { Provider as PaperProvider } from 'react-native-paper';
 
 import { AuthProvider, useAuth } from '../src/context/AuthContext';
 import { FeatureFlagProvider, useFeatureFlags } from '../src/context/FeatureFlagContext';
@@ -54,19 +55,25 @@ function AuthProtection() {
 }
 
 function ThemeWrapper() {
-    const { isDarkMode, theme: baseTheme } = useTheme();
-    const { getValue } = useFeatureFlags();
-    
-    const theme = { ...baseTheme };
-    const accentOverride = getValue('ACCENT_COLOR');
-    if (accentOverride) {
-        theme.tint = accentOverride;
-    }
+  const { isDarkMode, theme: baseTheme } = useTheme();
+  const { getValue } = useFeatureFlags();
+  
+  const theme = { ...baseTheme };
+  const accentOverride = getValue('ACCENT_COLOR');
+  if (accentOverride) {
+    theme.tint = accentOverride;
+  }
 
-    return (
-        <ThemeProvider value={isDarkMode ? DarkTheme : DefaultTheme}>
+  return (
+      <ThemeProvider value={isDarkMode ? DarkTheme : DefaultTheme}>
             <StatusBar style={isDarkMode ? 'light' : 'dark'} />
-            <AuthProtection />
+            {Platform.OS === 'android' ? (
+              <PaperProvider>
+                <AuthProtection />
+              </PaperProvider>
+            ) : (
+              <AuthProtection />
+            )}
         </ThemeProvider>
     );
 }

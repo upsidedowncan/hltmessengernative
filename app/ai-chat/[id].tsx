@@ -50,6 +50,10 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
+type MainStackParamList = {
+  AIChat: undefined;
+};
+
 type Message = {
   id: string;
   content: string;
@@ -804,7 +808,12 @@ export default function AIChatScreen() {
   const [playingMessageId, setPlayingMessageId] = useState<string | null>(null);
   const [sound, setSound] = useState<Audio.Sound | null>(null);
   const [isSpeakingLoading, setIsSpeakingLoading] = useState<string | null>(null);
-  
+  const [settings, setSettings] = useState<AISettings>(DEFAULT_AI_SETTINGS);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [inputText, setInputText] = useState('');
+  const [loading, setLoading] = useState(false);
+  const insets = useSafeAreaInsets();
+
   const flatListRef = useRef<FlatList>(null);
 
   useEffect(() => {

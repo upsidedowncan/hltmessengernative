@@ -1,20 +1,24 @@
 import { NativeTabs, Icon, Label, VectorIcon } from 'expo-router/unstable-native-tabs';
 import { Ionicons } from '@expo/vector-icons';
-import { Platform } from 'react-native';
+import { useMaterial3Theme } from '@pchmn/expo-material3-theme';
+import { SafeAreaView } from 'react-native-safe-area-context'
+import { useTheme } from '../../src/context/ThemeContext';
 
 export default function TabLayout() {
-  const isDark = Platform.OS === 'ios' ? false : false;
-  
+  const { isDarkMode } = useTheme();
+  const { theme } = useMaterial3Theme();
+  const m3 = theme[isDarkMode ? 'dark' : 'light'];
+
   return (
+    <SafeAreaView style={{ flex: 1, backgroundColor: m3.background }}>
     <NativeTabs
-      backgroundColor={isDark ? '#1c1c1e' : '#fff'}
-      iconColor={{
-        default: isDark ? '#8e8e93' : '#8e8e93',
-        selected: '#007AFF',
-      }}
-      tintColor="#007AFF"
+      backgroundColor={m3.surface}
+        iconColor={{
+          default: m3.onSurfaceVariant,
+          selected: m3.onSurface,
+        }}
       labelStyle={{
-        color: isDark ? '#fff' : '#000',
+        color: m3.onSurface,
       }}
     >
       <NativeTabs.Trigger name="chats">
@@ -48,14 +52,7 @@ export default function TabLayout() {
             selected: <VectorIcon family={Ionicons} name="person-circle" />
         }} />
       </NativeTabs.Trigger>
-
-      <NativeTabs.Trigger name="create" role="search">
-        <Label>Search</Label>
-        <Icon src={{
-            default: <VectorIcon family={Ionicons} name="create" />,
-            selected: <VectorIcon family={Ionicons} name="create" />
-        }} />
-      </NativeTabs.Trigger>
     </NativeTabs>
+    </SafeAreaView>
   );
 }

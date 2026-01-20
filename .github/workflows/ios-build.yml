@@ -41,7 +41,6 @@ jobs:
             -configuration Debug \
             -sdk iphoneos \
             -archivePath $PWD/build/App.xcarchive \
-            -jobs 2 \
             -quiet \
             clean archive \
             CODE_SIGNING_ALLOWED=NO \

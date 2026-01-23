@@ -49,11 +49,11 @@ export default function TabLayout() {
         }} />
       </NativeTabs.Trigger>
 
-      <NativeTabs.Trigger name="create" role="search">
+      <NativeTabs.Trigger name="search" role="search">
         <Label>Search</Label>
         <Icon src={{
-            default: <VectorIcon family={Ionicons} name="create" />,
-            selected: <VectorIcon family={Ionicons} name="create" />
+            default: <VectorIcon family={Ionicons} name="search" />,
+            selected: <VectorIcon family={Ionicons} name="search" />
         }} />
       </NativeTabs.Trigger>
     </NativeTabs>

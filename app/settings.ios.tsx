@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTheme, ThemeMode } from '../src/context/ThemeContext';
 import { Button, Tile, ProfileHeader, AppBar } from '../src/components';
 import { useAuth } from '../src/context/AuthContext';
 import { NotificationSetup } from '../src/components/NotificationSetup';
 import { supabase } from '../src/services/supabase';
-import { Switch, Host } from '@expo/ui/swift-ui';
+import { Switch, Host, List } from '@expo/ui/swift-ui';
 
 export default function SettingsScreen() {
   const { theme, themeMode, setThemeMode } = useTheme();
@@ -69,99 +69,100 @@ export default function SettingsScreen() {
   };
 
   return (
-    <ScrollView
-      style={[styles.container, { backgroundColor: theme.background }]}
-      showsVerticalScrollIndicator={false}
-      contentInsetAdjustmentBehavior="automatic">
+    <Host style={{ flex: 1 }}>
       <AppBar title="Settings" isNative={true} largeTitle={true} />
+      <List
+        style={{ flex: 1 }}
+        listStyle='insetGrouped'
+      >
+        <ProfileHeader 
+          fullName={fullName}
+          username={username}
+          isSaving={isSaving}
+          onFullNameChange={onFullNameChange}
+          onUsernameChange={onUsernameChange}
+        />
 
-      <ProfileHeader 
-        fullName={fullName}
-        username={username}
-        isSaving={isSaving}
-        onFullNameChange={onFullNameChange}
-        onUsernameChange={onUsernameChange}
-      />
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: theme.text }]}>General</Text>
+          <View style={styles.groupContainer}>
+            <Tile
+              title="Notifications"
+              icon="notifications-outline"
+              onPress={() => {}}
+              groupPosition="top"
+            />
+            <Tile
+              title="Dark Mode"
+              icon="moon-outline"
+              onPress={() => setThemeMode(themeMode === 'dark' ? 'light' : 'dark')}
+              groupPosition="middle"
+              rightElement={
+                <Host>
+                <Switch
+                  value={themeMode === 'dark'}
+                  onValueChange={(val) => setThemeMode(val ? 'dark' : 'light')}
+                  color={theme.tint}
+                  variant="switch"
+                />
+                </Host>
+              }
+            />
+            <Tile
+              title="Use System Theme"
+              icon="phone-portrait-outline"
+              onPress={() => setThemeMode(themeMode === 'system' ? 'light' : 'system')}
+              groupPosition="bottom"
+              rightElement={
+                <Host>
+                <Switch
+                  value={themeMode === 'system'}
+                  onValueChange={(val) => setThemeMode(val ? 'system' : 'light')}
+                  color={theme.tint}
+                  variant="switch"
+                />
+                </Host>
+              }
+              chevron={false}
+            />
+          </View>
+          <View style={{ paddingHorizontal: 24 }}>
+            <NotificationSetup />
+          </View>
+        </View>
 
-      <View style={styles.section}>
-        <Text style={[styles.sectionTitle, { color: theme.text }]}>General</Text>
-        <View style={styles.groupContainer}>
-          <Tile
-            title="Notifications"
-            icon="notifications-outline"
-            onPress={() => {}}
-            groupPosition="top"
-          />
-          <Tile
-            title="Dark Mode"
-            icon="moon-outline"
-            onPress={() => setThemeMode(themeMode === 'dark' ? 'light' : 'dark')}
-            groupPosition="middle"
-            rightElement={
-              <Host>
-              <Switch
-                value={themeMode === 'dark'}
-                onValueChange={(val) => setThemeMode(val ? 'dark' : 'light')}
-                color={theme.tint}
-                variant="switch"
-              />
-              </Host>
-            }
-          />
-          <Tile
-            title="Use System Theme"
-            icon="phone-portrait-outline"
-            onPress={() => setThemeMode(themeMode === 'system' ? 'light' : 'system')}
-            groupPosition="bottom"
-            rightElement={
-              <Host>
-              <Switch
-                value={themeMode === 'system'}
-                onValueChange={(val) => setThemeMode(val ? 'system' : 'light')}
-                color={theme.tint}
-                variant="switch"
-              />
-              </Host>
-            }
-            chevron={false}
-          />
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: theme.text }]}>Developer</Text>
+          <View style={styles.groupContainer}>
+            <Tile
+              title="Component Lab"
+              icon="beaker-outline"
+              onPress={() => router.push('/component-test')}
+              groupPosition="top"
+            />
+            <Tile
+              title="Developer Settings"
+              icon="code-slash-outline"
+              onPress={() => router.push('/dev-settings')}
+              groupPosition="bottom"
+            />
+          </View>
         </View>
-        <View style={{ paddingHorizontal: 24 }}>
-          <NotificationSetup />
-        </View>
-      </View>
 
-      <View style={styles.section}>
-        <Text style={[styles.sectionTitle, { color: theme.text }]}>Developer</Text>
-        <View style={styles.groupContainer}>
-          <Tile
-            title="Component Lab"
-            icon="beaker-outline"
-            onPress={() => router.push('/component-test')}
-            groupPosition="top"
-          />
-          <Tile
-            title="Developer Settings"
-            icon="code-slash-outline"
-            onPress={() => router.push('/dev-settings')}
-            groupPosition="bottom"
-          />
+        <View style={styles.section}>
+          <View style={{ paddingHorizontal: 24 }}>
+            <Button
+              title="Sign Out"
+              onPress={signOut}
+              type="outline"
+              color="#ef5350"
+              textColor="#ef5350"
+              icon="log-out-outline"
+            />
+          </View>
         </View>
-      </View>
-
-      <View style={styles.section}>
-        <View style={{ paddingHorizontal: 24 }}>
-          <Button
-            title="Sign Out"
-            onPress={signOut}
-            type="outline"
-            color="#ef5350"
-            textColor="#ef5350"
-            icon="log-out-outline"
-          />
-        </View>
-      </View>
-    </ScrollView>
+      </List>
+    </Host>
   );
 };
 

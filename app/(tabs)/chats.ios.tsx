@@ -1,12 +1,12 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, RefreshControl, ScrollView } from 'react-native';
+import { LiquidGlassView, LiquidGlassContainerView, isLiquidGlassSupported } from '@callstack/liquid-glass';
 import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '../../src/services/supabase';
 import { useAuth } from '../../src/context/AuthContext';
 import { useTheme } from '../../src/context/ThemeContext';
-import { List } from '@expo/ui/swift-ui';
 import { Ionicons } from '@expo/vector-icons';
 
 type ChatPreview = {
@@ -22,7 +22,7 @@ type ChatPreview = {
 const Avatar = ({ name }: { name: string }) => {
   const initials = name ? name.substring(0, 2).toUpperCase() : '??';
   return (
-    <View style={[styles.avatar, { backgroundColor: '#007AFF' }]}>
+    <View style={styles.avatar}>
       <Text style={styles.avatarText}>{initials}</Text>
     </View>
   );
@@ -83,9 +83,7 @@ export default function ChatScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
-      <FlatList
-        data={chats}
-        keyExtractor={item => item.friend_id}
+      <ScrollView
         contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 80 }]}
         refreshControl={
           <RefreshControl
@@ -94,53 +92,58 @@ export default function ChatScreen() {
             tintColor={theme.tint}
           />
         }
-        ListEmptyComponent={() =>
-          !loading ? (
-            <View style={{ alignItems: 'center', marginTop: 100, opacity: 0.5 }}>
-              <Ionicons name="chatbubbles-outline" size={64} color={theme.text} />
-              <Text style={{ color: theme.text, marginTop: 16 }}>No recent chats</Text>
-            </View>
-          ) : null
-        }
-        ItemSeparatorComponent={() => <View style={styles.separator} />}
-        renderItem={({ item }) => (
-          <TouchableOpacity onPress={() => openChat(item)} activeOpacity={0.7}>
-            <View style={styles.itemContainer}>
-              <Avatar name={item.full_name || item.username} />
-              <View style={styles.textContainer}>
-                <View style={styles.headerRow}>
-                  <Text style={[styles.name, { color: theme.text }]}>
-                    {item.full_name || item.username}
-                  </Text>
-                  <Text style={[styles.time, { color: theme.tabIconDefault }]}>
-                    {formatTime(item.last_message_at)}
-                  </Text>
-                </View>
-                <View style={styles.messageRow}>
-                  <Text
-                    numberOfLines={1}
-                    style={[
-                      styles.message,
-                      {
-                        flex: 1,
-                        fontWeight: item.unread_count > 0 ? '600' : '400',
-                        color: item.unread_count > 0 ? theme.text : theme.tabIconDefault
-                      }
-                    ]}
-                  >
-                    {item.last_message}
-                  </Text>
-                  {item.unread_count > 0 && (
-                    <View style={[styles.unreadBadge, { backgroundColor: '#FF3B30' }]}>
-                      <Text style={styles.unreadText}>{item.unread_count}</Text>
-                    </View>
-                  )}
-                </View>
-              </View>
-            </View>
-          </TouchableOpacity>
+      >
+        {!loading && chats.length === 0 && (
+          <View style={{ alignItems: 'center', marginTop: 100, opacity: 0.5 }}>
+            <Ionicons name="chatbubbles-outline" size={64} color={theme.text} />
+            <Text style={{ color: theme.text, marginTop: 16 }}>No recent chats</Text>
+          </View>
         )}
-      />
+        
+        <LiquidGlassContainerView spacing={0}>
+          {chats.map((item) => (
+            <TouchableOpacity key={item.friend_id} onPress={() => openChat(item)} activeOpacity={0.7}>
+              <LiquidGlassView
+                style={styles.itemContainer}
+                interactive
+                effect="clear"
+              >
+                <Avatar name={item.full_name || item.username} />
+                <View style={styles.textContainer}>
+                  <View style={styles.headerRow}>
+                    <Text style={[styles.name, { color: theme.text }]}>
+                      {item.full_name || item.username}
+                    </Text>
+                    <Text style={[styles.time, { color: theme.tabIconDefault }]}>
+                      {formatTime(item.last_message_at)}
+                    </Text>
+                  </View>
+                  <View style={styles.messageRow}>
+                    <Text
+                      numberOfLines={1}
+                      style={[
+                        styles.message,
+                        {
+                          flex: 1,
+                          fontWeight: item.unread_count > 0 ? '600' : '400',
+                          color: item.unread_count > 0 ? theme.text : theme.tabIconDefault
+                        }
+                      ]}
+                    >
+                      {item.last_message}
+                    </Text>
+                    {item.unread_count > 0 && (
+                      <View style={[styles.unreadBadge, { backgroundColor: '#FF3B30' }]}>
+                        <Text style={styles.unreadText}>{item.unread_count}</Text>
+                      </View>
+                    )}
+                  </View>
+                </View>
+              </LiquidGlassView>
+            </TouchableOpacity>
+          ))}
+        </LiquidGlassContainerView>
+      </ScrollView>
     </View>
   );
 }
@@ -152,12 +155,14 @@ const styles = StyleSheet.create({
   listContent: {
     paddingTop: 60,
     paddingVertical: 8,
+    paddingHorizontal: 16,
   },
   itemContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 12,
     paddingHorizontal: 16,
+    borderRadius: 16,
   },
   avatar: {
     width: 50,
@@ -166,6 +171,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 16,
+    // Removed solid background
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)'
   },
   avatarText: {
     fontSize: 18,
@@ -197,11 +205,6 @@ const styles = StyleSheet.create({
   message: {
     fontSize: 14,
     marginRight: 8,
-  },
-  separator: {
-    height: StyleSheet.hairlineWidth,
-    marginLeft: 82,
-    opacity: 0.3,
   },
   unreadBadge: {
     minWidth: 20,

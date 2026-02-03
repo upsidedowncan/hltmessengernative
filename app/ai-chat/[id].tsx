@@ -39,7 +39,7 @@ import { WebView } from 'react-native-webview';
 import { Audio } from 'expo-av';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import { useTheme } from '@/contexts/ThemeContext';
+import { useTheme } from '@/contexts/theme-context';
 import { AppBar } from '@/components/app-bar';
 import { supabase } from '@/services/supabase';
 import { AIService, AISettings, DEFAULT_AI_SETTINGS } from '@/services/ai-service';

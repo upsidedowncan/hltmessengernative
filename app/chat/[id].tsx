@@ -45,10 +45,10 @@ import Animated, {
 import { Ionicons } from '@expo/vector-icons';
 
 import { supabase } from '@/services/supabase';
-import { useAuth } from '@/contexts/AuthContext';
-import { useTheme } from '@/contexts/ThemeContext';
-import { useFeatureFlags } from '@/contexts/FeatureFlagContext';
-import { useCall } from '@/contexts/CallContext';
+import { useAuth } from '@/contexts/auth-context';
+import { useTheme } from '@/contexts/theme-context';
+import { useFeatureFlags } from '@/contexts/feature-flag-context';
+import { useCall } from '@/contexts/call-context';
 import { callService } from '@/services/call-service';
 import { AppBar } from '@/components/app-bar';
 import { supabase } from '@/services/supabase';

@@ -41,8 +41,8 @@ import { useMaterial3Theme } from '@pchmn/expo-material3-theme';
 import { Appbar, IconButton, Text as RNPText, Card, Divider, TouchableRipple, ActivityIndicator as RNPActivityIndicator, FAB, Surface, Portal, Dialog, Button, ProgressBar } from 'react-native-paper';
 
 import { supabase } from '@/services/supabase';
-import { useAuth } from '@/contexts/AuthContext';
-import { useTheme } from '@/contexts/ThemeContext';
+import { useAuth } from '@/contexts/auth-context';
+import { useTheme } from '@/contexts/theme-context';
 import { useSendNotification } from '@/hooks/useSendNotification';
 import { DeepLinkUserWidget } from '@/components/deep-link-user-widget.android';
 import { Colors } from '@/constants/colors';

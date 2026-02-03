@@ -4,9 +4,9 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '@/services/supabase';
-import { useAuth } from '@/context/AuthContext';
+import { useAuth } from '@/contexts/auth-context';
 import { useMaterial3Theme } from '@pchmn/expo-material3-theme';
-import { useTheme } from '@/context/ThemeContext';
+import { useTheme } from '@/contexts/theme-context';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Appbar, IconButton, FAB, Text as RNPText, Divider, Chip, TouchableRipple } from 'react-native-paper';
 

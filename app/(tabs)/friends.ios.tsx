@@ -12,11 +12,11 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/services/supabase';
-import { useAuth } from '@/context/AuthContext';
+import { useAuth } from '@/contexts/auth-context';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets, SafeAreaView } from 'react-native-safe-area-context';
-import { useTheme } from '@/context/ThemeContext';
+import { useTheme } from '@/contexts/theme-context';
 import { List } from '@expo/ui/swift-ui';
 
 type Profile = {

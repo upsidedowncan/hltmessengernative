@@ -10,11 +10,11 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useAuth } from '@/context/AuthContext';
+import { useAuth } from '@/contexts/auth-context';
 import { supabase } from '@/services/supabase';
 import { useMaterial3Theme } from '@pchmn/expo-material3-theme';
-import { useTheme } from '@/context/ThemeContext';
-import { SettingsTile } from '@/components';
+import { useTheme } from '@/contexts/theme-context';
+import { SettingsTile } from '@/components/settings-tile';
 
 export default function ProfileScreen() {
   const { user, profile, refreshProfile } = useAuth();

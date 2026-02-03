@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '@/services/supabase';
-import { useTheme } from '@/context/ThemeContext';
+import { useTheme } from '@/contexts/theme-context';
 import { useMaterial3Theme } from '@pchmn/expo-material3-theme';
 import { Button, Surface, Text as RNPText } from 'react-native-paper';
 

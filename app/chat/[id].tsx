@@ -49,11 +49,11 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useFeatureFlags } from '@/contexts/FeatureFlagContext';
 import { useCall } from '@/contexts/CallContext';
-import { callService } from '@/services/CallService';
-import { AppBar } from '@/components/AppBar';
-import { useSendNotification } from '@/hooks/useSendNotification';
-import { DeepLinkUserWidget } from '@/components/DeepLinkUserWidget';
-import { Colors } from '@/constants/Colors';
+import { callService } from '@/services/call-service';
+import { AppBar } from '@/components/app-bar';
+import { supabase } from '@/services/supabase';
+import { DeepLinkUserWidget } from '@/components/deep-link-user-widget';
+import { Colors } from '@/constants/colors';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { ScrollView, View, Text, StyleSheet, Alert } from 'react-native';
 import { useTheme } from '@/contexts/theme-context';
-import { AppBar } from '@/components';
+import { AppBar } from '@/components/app-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { 
   Button, 

@@ -21,9 +21,9 @@ import {
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useTheme } from '@/contexts/ThemeContext';
-import { AIService, AISettings, DEFAULT_AI_SETTINGS } from '@/services/AIService';
-import { AppBar } from '@/components/AppBar';
+import { useTheme } from '@/contexts/theme-context';
+import { AIService, AISettings, DEFAULT_AI_SETTINGS } from '@/services/ai-service';
+import { AppBar } from '@/components/app-bar';
 import { supabase } from '@/services/supabase';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');

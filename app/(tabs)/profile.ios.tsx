@@ -7,10 +7,10 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useAuth } from '@/context/AuthContext';
+import { useAuth } from '@/contexts/auth-context';
 import { supabase } from '@/services/supabase';
-import { useTheme } from '@/context/ThemeContext';
-import { TextField } from '@/components';
+import { useTheme } from '@/contexts/theme-context';
+import { TextField } from '@/components/text-field';
 import { Button, Host, List } from '@expo/ui/swift-ui';
 
 export default function ProfileScreen() {

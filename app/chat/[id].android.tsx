@@ -44,8 +44,8 @@ import { supabase } from '@/services/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useSendNotification } from '@/hooks/useSendNotification';
-import { DeepLinkUserWidget } from '@/components/DeepLinkUserWidget.android';
-import { Colors } from '@/constants/Colors';
+import { DeepLinkUserWidget } from '@/components/deep-link-user-widget.android';
+import { Colors } from '@/constants/colors';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 

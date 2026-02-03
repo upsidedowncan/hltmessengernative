@@ -6,7 +6,7 @@ import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AIService, AISettings, DEFAULT_AI_SETTINGS } from '@/services/ai-service';
 import { useTheme } from '@/contexts/theme-context';
-import { SettingsTile } from '@/components';
+import { SettingsTile } from '@/components/settings-tile';
 
 export default function AISettingsScreen() {
   const navigation = useNavigation();

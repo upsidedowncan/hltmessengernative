@@ -40,9 +40,9 @@ import { Audio } from 'expo-av';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { useTheme } from '@/contexts/ThemeContext';
-import { AppBar } from '@/components/AppBar';
+import { AppBar } from '@/components/app-bar';
 import { supabase } from '@/services/supabase';
-import { AIService, AISettings, DEFAULT_AI_SETTINGS } from '@/services/AIService';
+import { AIService, AISettings, DEFAULT_AI_SETTINGS } from '@/services/ai-service';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 

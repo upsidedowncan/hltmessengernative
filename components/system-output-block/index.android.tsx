@@ -3,8 +3,8 @@ import { View, StyleSheet, ScrollView, Linking } from 'react-native';
 import { useMaterial3Theme } from '@pchmn/expo-material3-theme';
 import { Text as RNPText, Surface, Chip, TouchableRipple } from 'react-native-paper';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-import { useTheme } from '@/context/ThemeContext';
-import { PythonExecutionService } from '@/services/PythonExecutionService';
+import { useTheme } from '@/contexts/theme-context';
+import { PythonExecutionService } from '@/services/python-execution-service';
 
 interface SystemOutputBlockProps {
   content: string;

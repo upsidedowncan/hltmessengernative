@@ -3,8 +3,8 @@ import { View, StyleSheet, TouchableOpacity, Dimensions, ActivityIndicator } fro
 import { useMaterial3Theme } from '@pchmn/expo-material3-theme';
 import { Text as RNPText, Surface, IconButton } from 'react-native-paper';
 import { Image } from 'expo-image';
-import { useTheme } from '@/context/ThemeContext';
-import { AIService } from '@/services/AIService';
+import { useTheme } from '@/contexts/theme-context';
+import { AIService } from '@/services/ai-service';
 import ChatBubble from '@/components/chat-bubble';
 
 interface ImageGenBlockProps {

@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { featureFlagService } from '@/services/FeatureFlagService';
+import { featureFlagService } from '@/services/feature-flag-service';
 
 interface FeatureFlagContextType {
   isEnabled: (key: string) => boolean;

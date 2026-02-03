@@ -9,7 +9,7 @@ import {
   Pressable,
   Alert,
 } from 'react-native';
-import { useTheme } from '@/contexts/ThemeContext';
+import { useTheme } from '@/contexts/theme-context';
 import Animated, { 
   useSharedValue, 
   useAnimatedStyle, 

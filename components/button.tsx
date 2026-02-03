@@ -2,7 +2,7 @@ import React from 'react';
 import { StyleSheet, ViewStyle, TextStyle, View } from 'react-native';
 import { Button as PaperButton } from 'react-native-paper';
 import { Ionicons } from '@expo/vector-icons';
-import { useTheme } from '@/contexts/ThemeContext';
+import { useTheme } from '@/contexts/theme-context';
 
 export type ButtonType = 'primary' | 'secondary' | 'outline' | 'ghost';
 export type ButtonSize = 'small' | 'medium' | 'large';

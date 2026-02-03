@@ -4,8 +4,8 @@ import { useMaterial3Theme } from '@pchmn/expo-material3-theme';
 import { Text as RNPText, Surface, IconButton, ActivityIndicator } from 'react-native-paper';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
-import { useTheme } from '@/context/ThemeContext';
-import { PythonExecutionService, PythonExecutionResult } from '@/services/PythonExecutionService';
+import { useTheme } from '@/contexts/theme-context';
+import { PythonExecutionService, PythonExecutionResult } from '@/services/python-execution-service';
 
 interface PythonCodeBlockProps {
   code: string;

@@ -9,7 +9,7 @@ import {
   ImageSourcePropType,
 } from 'react-native';
 import { Image } from 'expo-image';
-import { useTheme } from '@/contexts/ThemeContext';
+import { useTheme } from '@/contexts/theme-context';
 
 interface CardProps {
   title?: string;

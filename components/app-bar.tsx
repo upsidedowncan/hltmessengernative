@@ -2,7 +2,7 @@ import React, { useLayoutEffect } from 'react';
 import { View, Platform, TextStyle, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Appbar } from 'react-native-paper';
-import { useTheme } from '@/contexts/ThemeContext';
+import { useTheme } from '@/contexts/theme-context';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface AppBarProps {

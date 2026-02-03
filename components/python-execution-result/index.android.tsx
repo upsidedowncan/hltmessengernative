@@ -3,8 +3,8 @@ import { View, StyleSheet, ScrollView, TouchableOpacity, Linking, Image, Dimensi
 import { useMaterial3Theme } from '@pchmn/expo-material3-theme';
 import { Text as RNPText, Surface, IconButton, ActivityIndicator, TouchableRipple } from 'react-native-paper';
 import { Ionicons } from '@expo/vector-icons';
-import { useTheme } from '@/context/ThemeContext';
-import { PythonExecutionResult as ExecutionResult, PythonFile, PythonExecutionService } from '@/services/PythonExecutionService';
+import { useTheme } from '@/contexts/theme-context';
+import { PythonExecutionResult as ExecutionResult, PythonFile, PythonExecutionService } from '@/services/python-execution-service';
 import { WebView } from 'react-native-webview';
 
 interface PythonExecutionResultProps {

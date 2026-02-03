@@ -1,8 +1,8 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { useAuth } from './AuthContext';
-import { signalingService, SignalingMessage } from '@/services/SignalingService';
-import { callService } from '@/services/CallService';
+import { signalingService, SignalingMessage } from '@/services/signaling-service';
+import { callService } from '@/services/call-service';
 import { useFeatureFlags } from './FeatureFlagContext';
 
 interface CallContextType {

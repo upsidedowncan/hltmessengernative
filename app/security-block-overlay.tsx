@@ -1,10 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, Text, Pressable, ScrollView } from 'react-native';
 import { useSecurity } from '@/contexts/security-context';
-import { useTheme } from '@/contexts/theme-context';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Host, Button, List } from '@expo/ui/swift-ui';
-import { Ionicons } from '@expo/vector-icons';
+import { MaterialIcons } from '@expo/vector-icons';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -13,11 +11,10 @@ import Animated, {
   interpolate,
   Extrapolate,
 } from 'react-native-reanimated';
-import UnlockVerificationChat from './UnlockVerificationChat';
+import UnlockVerificationChat from './unlock-verification-chat';
 
 function CountdownTimer({ expiresAt }: { expiresAt: string }) {
   const [timeLeft, setTimeLeft] = useState('');
-  const { theme } = useTheme();
 
   useEffect(() => {
     const updateTimer = () => {
@@ -41,18 +38,15 @@ function CountdownTimer({ expiresAt }: { expiresAt: string }) {
     return () => clearInterval(interval);
   }, [expiresAt]);
 
-  const errorColor = '#FF3B30';
-  
   return (
-    <View style={[styles.timerWrapper, { backgroundColor: errorColor + '20' }]}>
-      <Text style={[styles.timerDigits, { color: errorColor }]}>{timeLeft}</Text>
-      <Text style={[styles.timerCaption, { color: theme.tabIconDefault }]}>until you can try again</Text>
+    <View style={styles.timerWrapper}>
+      <Text style={styles.timerDigits}>{timeLeft}</Text>
+      <Text style={styles.timerCaption}>until you can try again</Text>
     </View>
   );
 }
 
 function FAQSection() {
-  const { theme } = useTheme();
   const faqData = [
     { question: "New location detected", answer: "You logged in from a different city or country than usual. This could be from traveling, using a VPN, or logging in from a new device." },
     { question: "Multiple failed attempts", answer: "Too many incorrect password attempts were made. For security, we temporarily lock accounts after several failed logins." },
@@ -75,10 +69,10 @@ function FAQSection() {
 
   return (
     <View style={styles.faqOuterContainer}>
-      <Text style={[styles.faqTitle, { color: theme.tabIconDefault }]}>Why did this happen?</Text>
+      <Text style={styles.faqTitle}>Why did this happen?</Text>
       
-      <View style={[styles.faqWrapper, { backgroundColor: theme.cardBackground }]}>
-        <Animated.View style={[styles.fadeTop, topFadeStyle, { backgroundColor: theme.background }]} />
+      <View style={styles.faqWrapper}>
+        <Animated.View style={[styles.fadeTop, topFadeStyle]} />
         
         <ScrollView
           style={styles.faqScroll}
@@ -92,17 +86,17 @@ function FAQSection() {
             {faqData.map((item, index) => (
               <Pressable key={index} style={styles.faqItem}>
                 <View style={styles.faqHeader}>
-                  <Text style={[styles.faqQuestion, { color: theme.text }]}>{item.question}</Text>
-                  <Ionicons name="chevron-down" size={20} color={theme.tabIconDefault} />
+                  <Text style={styles.faqQuestion}>{item.question}</Text>
+                  <MaterialIcons name="expand-more" size={20} color="#666" />
                 </View>
-                <Text style={[styles.faqAnswer, { color: theme.tabIconDefault }]}>{item.answer}</Text>
+                <Text style={styles.faqAnswer}>{item.answer}</Text>
               </Pressable>
             ))}
             <View style={styles.faqSpacer} />
           </View>
         </ScrollView>
         
-        <View style={[styles.fadeBottom, { backgroundColor: theme.background }]} />
+        <View style={styles.fadeBottom} />
       </View>
     </View>
   );
@@ -110,7 +104,6 @@ function FAQSection() {
 
 export default function SecurityBlockOverlay() {
   const { isBlocked, blockReason, lockoutExpiresAt, loading } = useSecurity();
-  const { theme } = useTheme();
   const [showUnlockChat, setShowUnlockChat] = useState(false);
   const fadeAnim = useSharedValue(0);
   const slideAnim = useSharedValue(50);
@@ -137,7 +130,7 @@ export default function SecurityBlockOverlay() {
 
   if (showUnlockChat) {
     return (
-      <Animated.View style={[styles.container, containerStyle, { backgroundColor: theme.background }]}>
+      <Animated.View style={[styles.container, containerStyle]}>
         <UnlockVerificationChat onClose={() => setShowUnlockChat(false)} />
       </Animated.View>
     );
@@ -146,19 +139,19 @@ export default function SecurityBlockOverlay() {
   const isLocked = blockReason === 'account_locked';
 
   return (
-    <Animated.View style={[styles.container, containerStyle, { backgroundColor: theme.background }]}>
+    <Animated.View style={[styles.container, containerStyle]}>
       <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
         <Animated.View style={[styles.content, contentStyle]}>
           <View style={styles.topSection}>
-            <View style={[styles.iconWrapper, { backgroundColor: '#FF3B30' + '20' }]}>
-              <Ionicons name="lock-closed" size={56} color="#FF3B30" />
+            <View style={styles.iconWrapper}>
+              <MaterialIcons name="lock-outline" size={56} color="#ef4444" />
             </View>
 
-            <Text style={[styles.heading, { color: theme.text }]}>
+            <Text style={styles.heading}>
               {isLocked ? 'Access Temporarily Locked' : 'Security Alert'}
             </Text>
 
-            <Text style={[styles.description, { color: theme.tabIconDefault }]}>
+            <Text style={styles.description}>
               {isLocked 
                 ? "We've temporarily restricted access to your account due to unusual activity. This is a security measure to protect your data."
                 : "We noticed something unusual about this login attempt. For your protection, access has been restricted."
@@ -169,17 +162,12 @@ export default function SecurityBlockOverlay() {
               <CountdownTimer expiresAt={lockoutExpiresAt} />
             )}
 
-            <Host style={styles.buttonHost}>
-              <Button
-                onPress={() => setShowUnlockChat(true)}
-                variant="glassProminent"
-                systemImage="message.fill"
-              >
-                Verify Identity & Unlock
-              </Button>
-            </Host>
+            <Pressable style={styles.unlockButton} onPress={() => setShowUnlockChat(true)}>
+              <MaterialIcons name="chat" size={20} color="#0a0a0a" />
+              <Text style={styles.unlockButtonText}>Verify Identity & Unlock</Text>
+            </Pressable>
             
-            <Text style={[styles.unlockHint, { color: theme.tabIconDefault }]}>
+            <Text style={styles.unlockHint}>
               Chat with our AI to prove it's really you
             </Text>
           </View>
@@ -195,6 +183,7 @@ const styles = StyleSheet.create({
   container: {
     ...StyleSheet.absoluteFillObject,
     zIndex: 9999,
+    backgroundColor: '#0a0a0a',
   },
   safeArea: {
     flex: 1,
@@ -208,22 +197,19 @@ const styles = StyleSheet.create({
     paddingVertical: 24,
   },
   iconWrapper: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
     marginBottom: 20,
   },
   heading: {
     fontSize: 24,
     fontWeight: '600',
+    color: '#fff',
     textAlign: 'center',
     marginBottom: 12,
     letterSpacing: -0.5,
   },
   description: {
     fontSize: 15,
+    color: '#888',
     textAlign: 'center',
     lineHeight: 22,
     maxWidth: 340,
@@ -231,28 +217,42 @@ const styles = StyleSheet.create({
   },
   timerWrapper: {
     alignItems: 'center',
+    marginTop: 8,
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
     paddingVertical: 16,
     paddingHorizontal: 32,
     borderRadius: 16,
-    marginTop: 8,
     marginBottom: 16,
   },
   timerDigits: {
     fontSize: 36,
     fontWeight: '700',
+    color: '#ef4444',
     fontVariant: ['tabular-nums'],
     letterSpacing: 1,
   },
   timerCaption: {
     fontSize: 13,
+    color: '#666',
     marginTop: 4,
   },
-  buttonHost: {
-    width: '100%',
-    height: 50,
+  unlockButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#4ade80',
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    gap: 8,
     marginTop: 8,
   },
+  unlockButtonText: {
+    color: '#0a0a0a',
+    fontSize: 16,
+    fontWeight: '600',
+  },
   unlockHint: {
+    color: '#666',
     fontSize: 13,
     marginTop: 8,
   },
@@ -263,6 +263,7 @@ const styles = StyleSheet.create({
   faqTitle: {
     fontSize: 13,
     fontWeight: '600',
+    color: '#666',
     textTransform: 'uppercase',
     letterSpacing: 1,
     marginBottom: 12,
@@ -271,6 +272,7 @@ const styles = StyleSheet.create({
   faqWrapper: {
     flex: 1,
     position: 'relative',
+    backgroundColor: 'rgba(255,255,255,0.03)',
     borderRadius: 16,
     overflow: 'hidden',
   },
@@ -290,6 +292,7 @@ const styles = StyleSheet.create({
     right: 0,
     height: 30,
     zIndex: 10,
+    backgroundColor: '#0a0a0a',
     opacity: 0,
   },
   fadeBottom: {
@@ -299,11 +302,12 @@ const styles = StyleSheet.create({
     right: 0,
     height: 40,
     zIndex: 10,
+    backgroundColor: '#0a0a0a',
   },
   faqItem: {
     padding: 14,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(128,128,128,0.1)',
+    borderBottomColor: 'rgba(255,255,255,0.05)',
   },
   faqHeader: {
     flexDirection: 'row',
@@ -313,11 +317,13 @@ const styles = StyleSheet.create({
   faqQuestion: {
     fontSize: 15,
     fontWeight: '500',
+    color: '#fff',
     flex: 1,
     paddingRight: 8,
   },
   faqAnswer: {
     fontSize: 14,
+    color: '#888',
     lineHeight: 20,
     marginTop: 8,
     paddingTop: 8,

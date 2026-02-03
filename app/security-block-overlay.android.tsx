@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, Text, Pressable, ScrollView } from 'react-native';
+import { View, StyleSheet, ScrollView } from 'react-native';
 import { useSecurity } from '@/contexts/security-context';
+import { useMaterial3Theme } from '@pchmn/expo-material3-theme';
+import { useTheme } from '@/contexts/theme-context';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { MaterialIcons } from '@expo/vector-icons';
+import { Surface, Text, IconButton, List, Divider, Button } from 'react-native-paper';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -11,9 +13,9 @@ import Animated, {
   interpolate,
   Extrapolate,
 } from 'react-native-reanimated';
-import UnlockVerificationChat from './UnlockVerificationChat';
+import UnlockVerificationChat from './unlock-verification-chat';
 
-function CountdownTimer({ expiresAt }: { expiresAt: string }) {
+function CountdownTimer({ expiresAt, m3 }: { expiresAt: string; m3: any }) {
   const [timeLeft, setTimeLeft] = useState('');
 
   useEffect(() => {
@@ -39,14 +41,18 @@ function CountdownTimer({ expiresAt }: { expiresAt: string }) {
   }, [expiresAt]);
 
   return (
-    <View style={styles.timerWrapper}>
-      <Text style={styles.timerDigits}>{timeLeft}</Text>
-      <Text style={styles.timerCaption}>until you can try again</Text>
-    </View>
+    <Surface style={[styles.timerSurface, { backgroundColor: m3.errorContainer }]}>
+      <Text variant="headlineLarge" style={[styles.timerDigits, { color: m3.error }]}>
+        {timeLeft}
+      </Text>
+      <Text variant="bodySmall" style={{ color: m3.onErrorContainer }}>
+        until you can try again
+      </Text>
+    </Surface>
   );
 }
 
-function FAQSection() {
+function FAQSection({ m3 }: { m3: any }) {
   const faqData = [
     { question: "New location detected", answer: "You logged in from a different city or country than usual. This could be from traveling, using a VPN, or logging in from a new device." },
     { question: "Multiple failed attempts", answer: "Too many incorrect password attempts were made. For security, we temporarily lock accounts after several failed logins." },
@@ -69,10 +75,12 @@ function FAQSection() {
 
   return (
     <View style={styles.faqOuterContainer}>
-      <Text style={styles.faqTitle}>Why did this happen?</Text>
+      <Text variant="labelLarge" style={[styles.faqTitle, { color: m3.onSurfaceVariant }]}>
+        Why did this happen?
+      </Text>
       
-      <View style={styles.faqWrapper}>
-        <Animated.View style={[styles.fadeTop, topFadeStyle]} />
+      <Surface style={[styles.faqContainer, { backgroundColor: m3.surfaceContainerHighest }]}>
+        <Animated.View style={[styles.fadeTop, topFadeStyle, { backgroundColor: m3.surfaceContainerHighest }]} />
         
         <ScrollView
           style={styles.faqScroll}
@@ -84,20 +92,27 @@ function FAQSection() {
         >
           <View style={styles.faqContent}>
             {faqData.map((item, index) => (
-              <Pressable key={index} style={styles.faqItem}>
-                <View style={styles.faqHeader}>
-                  <Text style={styles.faqQuestion}>{item.question}</Text>
-                  <MaterialIcons name="expand-more" size={20} color="#666" />
-                </View>
-                <Text style={styles.faqAnswer}>{item.answer}</Text>
-              </Pressable>
+              <List.Accordion
+                key={index}
+                title={item.question}
+                titleStyle={{ color: m3.onSurface }}
+                style={{ backgroundColor: m3.surfaceContainerHighest }}
+                theme={{ colors: { primary: m3.primary } }}
+              >
+                <List.Item
+                  title={item.answer}
+                  titleNumberOfLines={0}
+                  titleStyle={{ color: m3.onSurfaceVariant, fontSize: 14, lineHeight: 20 }}
+                  style={{ backgroundColor: m3.surfaceContainerHighest }}
+                />
+              </List.Accordion>
             ))}
             <View style={styles.faqSpacer} />
           </View>
         </ScrollView>
         
-        <View style={styles.fadeBottom} />
-      </View>
+        <View style={[styles.fadeBottom, { backgroundColor: m3.surfaceContainerHighest }]} />
+      </Surface>
     </View>
   );
 }
@@ -105,6 +120,10 @@ function FAQSection() {
 export default function SecurityBlockOverlay() {
   const { isBlocked, blockReason, lockoutExpiresAt, loading } = useSecurity();
   const [showUnlockChat, setShowUnlockChat] = useState(false);
+  const { isDarkMode } = useTheme();
+  const { theme: m3Theme } = useMaterial3Theme();
+  const m3 = m3Theme[isDarkMode ? 'dark' : 'light'];
+  
   const fadeAnim = useSharedValue(0);
   const slideAnim = useSharedValue(50);
 
@@ -130,7 +149,7 @@ export default function SecurityBlockOverlay() {
 
   if (showUnlockChat) {
     return (
-      <Animated.View style={[styles.container, containerStyle]}>
+      <Animated.View style={[styles.container, containerStyle, { backgroundColor: m3.background }]}>
         <UnlockVerificationChat onClose={() => setShowUnlockChat(false)} />
       </Animated.View>
     );
@@ -139,19 +158,29 @@ export default function SecurityBlockOverlay() {
   const isLocked = blockReason === 'account_locked';
 
   return (
-    <Animated.View style={[styles.container, containerStyle]}>
+    <Animated.View style={[styles.container, containerStyle, { backgroundColor: m3.background }]}>
       <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
         <Animated.View style={[styles.content, contentStyle]}>
           <View style={styles.topSection}>
-            <View style={styles.iconWrapper}>
-              <MaterialIcons name="lock-outline" size={56} color="#ef4444" />
-            </View>
+            <Surface style={[styles.iconSurface, { backgroundColor: m3.errorContainer }]}>
+              <IconButton
+                icon="lock"
+                size={40}
+                iconColor={m3.error}
+              />
+            </Surface>
 
-            <Text style={styles.heading}>
+            <Text 
+              variant="headlineSmall" 
+              style={[styles.heading, { color: m3.onBackground }]}
+            >
               {isLocked ? 'Access Temporarily Locked' : 'Security Alert'}
             </Text>
 
-            <Text style={styles.description}>
+            <Text 
+              variant="bodyMedium" 
+              style={[styles.description, { color: m3.onSurfaceVariant }]}
+            >
               {isLocked 
                 ? "We've temporarily restricted access to your account due to unusual activity. This is a security measure to protect your data."
                 : "We noticed something unusual about this login attempt. For your protection, access has been restricted."
@@ -159,20 +188,28 @@ export default function SecurityBlockOverlay() {
             </Text>
 
             {lockoutExpiresAt && (
-              <CountdownTimer expiresAt={lockoutExpiresAt} />
+              <CountdownTimer expiresAt={lockoutExpiresAt} m3={m3} />
             )}
 
-            <Pressable style={styles.unlockButton} onPress={() => setShowUnlockChat(true)}>
-              <MaterialIcons name="chat" size={20} color="#0a0a0a" />
-              <Text style={styles.unlockButtonText}>Verify Identity & Unlock</Text>
-            </Pressable>
+            <Button
+              mode="contained"
+              icon="chat"
+              onPress={() => setShowUnlockChat(true)}
+              style={[styles.unlockButton, { backgroundColor: m3.primary }]}
+              labelStyle={{ color: m3.onPrimary }}
+            >
+              Verify Identity & Unlock
+            </Button>
             
-            <Text style={styles.unlockHint}>
+            <Text 
+              variant="bodySmall" 
+              style={[styles.unlockHint, { color: m3.onSurfaceVariant }]}
+            >
               Chat with our AI to prove it's really you
             </Text>
           </View>
 
-          <FAQSection />
+          <FAQSection m3={m3} />
         </Animated.View>
       </SafeAreaView>
     </Animated.View>
@@ -183,7 +220,6 @@ const styles = StyleSheet.create({
   container: {
     ...StyleSheet.absoluteFillObject,
     zIndex: 9999,
-    backgroundColor: '#0a0a0a',
   },
   safeArea: {
     flex: 1,
@@ -196,85 +232,57 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 24,
   },
-  iconWrapper: {
+  iconSurface: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: 20,
   },
   heading: {
-    fontSize: 24,
-    fontWeight: '600',
-    color: '#fff',
     textAlign: 'center',
     marginBottom: 12,
-    letterSpacing: -0.5,
   },
   description: {
-    fontSize: 15,
-    color: '#888',
     textAlign: 'center',
     lineHeight: 22,
     maxWidth: 340,
     marginBottom: 20,
   },
-  timerWrapper: {
+  timerSurface: {
     alignItems: 'center',
-    marginTop: 8,
-    backgroundColor: 'rgba(239, 68, 68, 0.1)',
     paddingVertical: 16,
     paddingHorizontal: 32,
     borderRadius: 16,
+    marginTop: 8,
     marginBottom: 16,
   },
   timerDigits: {
-    fontSize: 36,
-    fontWeight: '700',
-    color: '#ef4444',
     fontVariant: ['tabular-nums'],
     letterSpacing: 1,
   },
-  timerCaption: {
-    fontSize: 13,
-    color: '#666',
-    marginTop: 4,
-  },
   unlockButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#4ade80',
-    paddingVertical: 14,
-    paddingHorizontal: 24,
-    borderRadius: 12,
-    gap: 8,
     marginTop: 8,
-  },
-  unlockButtonText: {
-    color: '#0a0a0a',
-    fontSize: 16,
-    fontWeight: '600',
+    borderRadius: 12,
   },
   unlockHint: {
-    color: '#666',
-    fontSize: 13,
     marginTop: 8,
+    textAlign: 'center',
   },
   faqOuterContainer: {
     flex: 1,
     marginTop: 16,
   },
   faqTitle: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#666',
-    textTransform: 'uppercase',
-    letterSpacing: 1,
     marginBottom: 12,
     marginLeft: 4,
   },
-  faqWrapper: {
+  faqContainer: {
     flex: 1,
-    position: 'relative',
-    backgroundColor: 'rgba(255,255,255,0.03)',
     borderRadius: 16,
     overflow: 'hidden',
+    position: 'relative',
   },
   faqScroll: {
     flex: 1,
@@ -292,7 +300,6 @@ const styles = StyleSheet.create({
     right: 0,
     height: 30,
     zIndex: 10,
-    backgroundColor: '#0a0a0a',
     opacity: 0,
   },
   fadeBottom: {
@@ -302,30 +309,5 @@ const styles = StyleSheet.create({
     right: 0,
     height: 40,
     zIndex: 10,
-    backgroundColor: '#0a0a0a',
-  },
-  faqItem: {
-    padding: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.05)',
-  },
-  faqHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  faqQuestion: {
-    fontSize: 15,
-    fontWeight: '500',
-    color: '#fff',
-    flex: 1,
-    paddingRight: 8,
-  },
-  faqAnswer: {
-    fontSize: 14,
-    color: '#888',
-    lineHeight: 20,
-    marginTop: 8,
-    paddingTop: 8,
   },
 });

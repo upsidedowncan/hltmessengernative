@@ -15,8 +15,8 @@ import { ThemeProvider as CustomThemeProvider, useTheme } from '@/contexts/theme
 import { CallProvider } from '@/contexts/call-context';
 import { ToastProvider } from '@/contexts/toast-context';
 import { useDeepLinkHandler } from '@/hooks/use-deep-link-handler';
-import { HostWrapper } from '@/components/ui/HostWrapper';
-import SecurityBlockOverlay from './SecurityBlockOverlay';
+import { HostWrapper } from '@/components/ui/host-wrapper';
+import SecurityBlockOverlay from './security-block-overlay';
 
 function AuthProtection() {
   const { session, loading, profile } = useAuth();

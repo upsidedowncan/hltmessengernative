@@ -1,9 +1,9 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useRouter } from 'expo-router';
-import { useAuth } from './AuthContext';
+import { useAuth } from './auth-context';
 import { signalingService, SignalingMessage } from '@/services/signaling-service';
 import { callService } from '@/services/call-service';
-import { useFeatureFlags } from './FeatureFlagContext';
+import { useFeatureFlags } from './feature-flag-context';
 
 interface CallContextType {
   isCallInProgress: boolean;

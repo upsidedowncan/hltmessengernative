@@ -51,7 +51,6 @@ import { useFeatureFlags } from '@/contexts/feature-flag-context';
 import { useCall } from '@/contexts/call-context';
 import { callService } from '@/services/call-service';
 import { AppBar } from '@/components/app-bar';
-import { supabase } from '@/services/supabase';
 import { DeepLinkUserWidget } from '@/components/deep-link-user-widget';
 import { Colors } from '@/constants/colors';
 

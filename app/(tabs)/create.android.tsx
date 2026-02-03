@@ -2,7 +2,7 @@ import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Text, useTheme as usePaperTheme } from 'react-native-paper';
 import { useRouter } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaInsets, SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '@expo/ui/jetpack-compose';
 
 export default function CreateScreenAndroid() {
@@ -11,7 +11,7 @@ export default function CreateScreenAndroid() {
   const insets = useSafeAreaInsets();
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.background, paddingTop: insets.top }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <Text variant="headlineMedium" style={[styles.title, { color: theme.colors.onBackground }]}>
         New Chat
       </Text>
@@ -46,27 +46,28 @@ export default function CreateScreenAndroid() {
           Message your friends
         </Text>
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 24,
+    padding: 16,
   },
   title: {
     fontWeight: 'bold',
     marginBottom: 8,
+    marginTop: 8,
   },
   subtitle: {
-    marginBottom: 48,
+    marginBottom: 32,
   },
   buttonContainer: {
     alignItems: 'stretch',
   },
   button: {
-    height: 56, // Make them a bit taller if possible
+    height: 56,
     marginBottom: 8,
   },
   description: {

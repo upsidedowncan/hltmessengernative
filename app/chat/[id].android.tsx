@@ -12,24 +12,23 @@ import {
   LayoutAnimation,
   UIManager,
   Image,
-  Modal,
   Pressable,
   useWindowDimensions,
   Linking,
   ScrollView,
   RefreshControl,
+  TouchableOpacity,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaInsets, SafeAreaView } from 'react-native-safe-area-context';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withSpring,
   withTiming,
-  interpolate,
-  useDerivedValue
+  runOnJS,
 } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
@@ -39,7 +38,7 @@ import { WebView } from 'react-native-webview';
 import { Audio } from 'expo-av';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useMaterial3Theme } from '@pchmn/expo-material3-theme';
-import { Appbar, IconButton, Text as RNPText, Card, Divider, TouchableRipple, ActivityIndicator as RNPActivityIndicator, FAB, Surface, Portal, Dialog, Button, ProgressBar, Menu } from 'react-native-paper';
+import { Appbar, IconButton, Text as RNPText, Card, Divider, TouchableRipple, ActivityIndicator as RNPActivityIndicator, FAB, Surface, Portal, Dialog, Button, ProgressBar } from 'react-native-paper';
 
 import { supabase } from '../../src/services/supabase';
 import { useAuth } from '../../src/context/AuthContext';
@@ -95,6 +94,7 @@ export default function SingleChatScreen() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
   const [loading, setLoading] = useState(true);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [sending, setSending] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'disconnected'>('connecting');
 
@@ -120,6 +120,37 @@ export default function SingleChatScreen() {
   const [menuVisible, setMenuVisible] = useState(false);
   const [menuAnchor, setMenuAnchor] = useState({ x: 0, y: 0 });
   const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
+  const [menuOnLeft, setMenuOnLeft] = useState(true);
+
+  const menuAnimation = useSharedValue(0);
+  const menuScale = useSharedValue(0);
+  const menuOpacity = useSharedValue(0);
+
+  const closeMenu = () => {
+    menuAnimation.value = withTiming(0, { duration: 180 });
+    menuScale.value = withSpring(0, { damping: 55, stiffness: 520 });
+    menuOpacity.value = withTiming(0, { duration: 120 }, () => {
+      runOnJS(setSelectedMessage)(null);
+      runOnJS(setMenuVisible)(false);
+    });
+  };
+
+  const openMenu = (message: Message, x: number, y: number) => {
+    const screenWidth = Dimensions.get('window').width;
+    const menuWidth = 220;
+    
+    const isLeft = x < screenWidth / 2;
+    setMenuOnLeft(isLeft);
+    
+    setMenuAnchor({
+      x: isLeft ? Math.max(16, x - 16) : Math.min(screenWidth - menuWidth + 16, x - menuWidth + 16),
+      y: Math.min(y - 8, Dimensions.get('window').height - 100 - 50)
+    });
+    setSelectedMessage(message);
+    menuAnimation.value = withTiming(1, { duration: 180 });
+    menuScale.value = withSpring(1, { damping: 55, stiffness: 520 });
+    menuOpacity.value = withTiming(1, { duration: 120 });
+  };
 
   useEffect(() => {
     loadCachedMessages();
@@ -141,6 +172,19 @@ export default function SingleChatScreen() {
       Keyboard.dismiss();
     }
   }, [isAttachmentMenuOpen]);
+
+  useEffect(() => {
+    const showSub = Keyboard.addListener('keyboardDidShow', (e) => {
+      setKeyboardHeight(e.endCoordinates?.height || 0);
+    });
+    const hideSub = Keyboard.addListener('keyboardDidHide', () => {
+      setKeyboardHeight(0);
+    });
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   const loadCachedMessages = async () => {
     try {
@@ -323,15 +367,7 @@ export default function SingleChatScreen() {
 
   const handleLongPress = (event: any, message: Message) => {
     const { nativeEvent } = event;
-    setMenuAnchor({ x: nativeEvent.pageX, y: nativeEvent.pageY });
-    setSelectedMessage(message);
-    setMenuVisible(true);
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-  };
-
-  const closeMenu = () => {
-    setMenuVisible(false);
-    setSelectedMessage(null);
+    openMenu(message, nativeEvent.pageX, nativeEvent.pageY);
   };
 
   const copyToClipboard = async (text: string) => {
@@ -349,6 +385,75 @@ export default function SingleChatScreen() {
     } catch (error) {
       console.error('Delete error', error);
     }
+  };
+
+  const MessageContextMenu = () => {
+    const isMyMessage = selectedMessage?.sender_id === user?.id;
+    const isLeft = menuOnLeft;
+    const menuWidth = 220;
+
+    const animatedStyle = useAnimatedStyle(() => ({
+      transform: [{ scale: menuScale.value }],
+      transformOrigin: [isLeft ? 0 : menuWidth, 0, 0],
+      opacity: menuOpacity.value,
+    }));
+
+    const backdropStyle = useAnimatedStyle(() => ({
+      opacity: menuAnimation.value * 0.4,
+    }));
+
+    if (menuAnimation.value === 0 || !selectedMessage) return null;
+
+    return (
+      <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
+        <Animated.View 
+          style={[StyleSheet.absoluteFill, { backgroundColor: '#000', position: 'absolute' }, backdropStyle]} 
+          pointerEvents="auto"
+        >
+          <TouchableOpacity 
+            style={{ flex: 1 }} 
+            activeOpacity={1}
+            onPress={closeMenu}
+          />
+        </Animated.View>
+        <Animated.View style={[
+          styles.customMenu,
+          animatedStyle,
+          {
+            backgroundColor: m3.surface,
+            position: 'absolute',
+            left: menuAnchor.x,
+            top: menuAnchor.y,
+            width: 220,
+          }
+        ]}>
+          <TouchableRipple
+            onPress={() => { copyToClipboard(selectedMessage.content); closeMenu(); }}
+            style={styles.menuItem}
+          >
+            <View style={styles.menuItemContent}>
+              <RNPText variant="bodyLarge" style={{ color: m3.onSurface }}>Copy</RNPText>
+              <Ionicons name="copy" size={22} color={m3.onSurface} />
+            </View>
+          </TouchableRipple>
+          
+          {isMyMessage && (
+            <>
+              <Divider style={{ backgroundColor: m3.outline }} />
+              <TouchableRipple
+                onPress={() => { deleteMessage(selectedMessage.id); closeMenu(); }}
+                style={styles.menuItem}
+              >
+                <View style={styles.menuItemContent}>
+                  <RNPText variant="bodyLarge" style={{ color: m3.error }}>Delete</RNPText>
+                  <Ionicons name="trash" size={22} color={m3.error} />
+                </View>
+              </TouchableRipple>
+            </>
+          )}
+        </Animated.View>
+      </View>
+    );
   };
 
   const renderHeaderTitle = () => (
@@ -409,11 +514,13 @@ export default function SingleChatScreen() {
                      <View key={`text-${lastIndex}`}>
                        <Markdown
                           style={{
-                            body: {
-                              color: isMe ? m3.onPrimaryContainer : m3.onSurface,
-                              fontSize: 15,
-                              marginVertical: 2,
-                            },
+                             body: {
+                               color: isMe ? m3.onPrimaryContainer : m3.onSurface,
+                               fontSize: 15,
+                               marginVertical: 0,
+                               paddingVertical: 0,
+                               lineHeight: 18,
+                             },
                           }}
                         >
                           {content.substring(lastIndex, match.index)}
@@ -439,7 +546,7 @@ export default function SingleChatScreen() {
                             body: {
                               color: isMe ? m3.onPrimaryContainer : m3.onSurface,
                               fontSize: 15,
-                              marginVertical: 2,
+                              marginVertical: 0,
                             },
                           }}
                         >
@@ -451,51 +558,45 @@ export default function SingleChatScreen() {
 
               if (parts.length === 0) {
                  return (
-                    <Markdown
-                        style={{
-                          body: {
-                            color: isMe ? m3.onPrimaryContainer : m3.onSurface,
-                            fontSize: 15,
-                            marginVertical: 2,
-                            marginTop: 2,
-                            marginBottom: 2,
-                            paddingVertical: 0,
-                          },
-                          paragraph: {
-                            marginVertical: 2,
-                            marginTop: 2,
-                            marginBottom: 2,
-                          },
-                          link: {
-                            color: isMe ? m3.onPrimaryContainer : m3.primary,
-                          },
-                          strong: {
-                            fontWeight: 'bold',
-                          },
-                          em: {
-                            fontStyle: 'italic',
-                          },
-                          code: {
-                            backgroundColor: isMe ? 'rgba(0,0,0,0.1)' : 'rgba(0,0,0,0.05)',
-                            paddingHorizontal: 4,
-                            paddingVertical: 2,
-                            borderRadius: 4,
-                            fontFamily: 'monospace',
-                          },
-                          pre: {
-                            backgroundColor: isMe ? 'rgba(0,0,0,0.1)' : 'rgba(0,0,0,0.05)',
-                            padding: 8,
-                            borderRadius: 8,
-                          },
-                          blockquote: {
-                            borderLeftWidth: 3,
-                            borderLeftColor: m3.primary,
-                            paddingLeft: 8,
-                            marginLeft: 0,
-                            color: isMe ? m3.onPrimaryContainer : m3.onSurfaceVariant,
-                          },
-                        }}
-                      >
+                        <Markdown
+                          style={{
+                            body: {
+                              color: isMe ? m3.onPrimaryContainer : m3.onSurface,
+                              fontSize: 15,
+                              marginVertical: 0,
+                              paddingVertical: 0,
+                            },
+                            paragraph: { marginVertical: 0, paddingVertical: 0, lineHeight: 18 },
+                            link: {
+                              color: isMe ? m3.onPrimaryContainer : m3.primary,
+                            },
+                            strong: {
+                              fontWeight: 'bold',
+                            },
+                            em: {
+                              fontStyle: 'italic',
+                            },
+                            code: {
+                              backgroundColor: isMe ? 'rgba(0,0,0,0.1)' : 'rgba(0,0,0,0.05)',
+                              paddingHorizontal: 4,
+                              paddingVertical: 2,
+                              borderRadius: 4,
+                              fontFamily: 'monospace',
+                            },
+                            pre: {
+                              backgroundColor: isMe ? 'rgba(0,0,0,0.1)' : 'rgba(0,0,0,0.05)',
+                              padding: 8,
+                              borderRadius: 8,
+                            },
+                            blockquote: {
+                              borderLeftWidth: 3,
+                              borderLeftColor: m3.primary,
+                              paddingLeft: 8,
+                              marginLeft: 0,
+                              color: isMe ? m3.onPrimaryContainer : m3.onSurfaceVariant,
+                            },
+                          }}
+                        >
                         {content}
                       </Markdown>
                  );
@@ -511,19 +612,19 @@ export default function SingleChatScreen() {
                   style={{ flexDirection: 'row', justifyContent: isMe ? 'flex-end' : 'flex-start' }}
                 >
                     <Surface
-                    style={[
-                      styles.bubble,
-                      {
-                        backgroundColor: isMe ? m3.primaryContainer : m3.surface,
-                        borderTopLeftRadius: !isMe && !isLastInGroup ? 4 : 16,
-                        borderTopRightRadius: isMe && !isLastInGroup ? 4 : 16,
-                        borderBottomLeftRadius: !isMe ? 4 : 16,
-                        borderBottomRightRadius: isMe ? 4 : 16,
-                        maxWidth: '75%'
-                      }
-                    ]}
-                    elevation={0}
-                  >
+                      style={[
+                        styles.bubble,
+                        {
+                          backgroundColor: isMe ? m3.primaryContainer : m3.surfaceContainerHighest,
+                          borderTopLeftRadius: !isMe && !isLastInGroup ? 4 : 16,
+                          borderTopRightRadius: isMe && !isLastInGroup ? 4 : 16,
+                          borderBottomLeftRadius: !isMe ? 4 : 16,
+                          borderBottomRightRadius: isMe ? 4 : 16,
+                          maxWidth: '75%'
+                        }
+                      ]}
+                      elevation={0}
+                    >
                     {item.attachments?.length > 0 && (
                       <View style={styles.attachmentContainer}>
                         {item.attachments.map((att: Attachment, idx: number) => (
@@ -559,7 +660,7 @@ export default function SingleChatScreen() {
             );
           }}
           inverted
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={[styles.listContent, { paddingBottom: 80 + keyboardHeight }]}
           removeClippedSubviews={true}
           windowSize={5}
           maxToRenderPerBatch={5}
@@ -576,89 +677,86 @@ export default function SingleChatScreen() {
           onEndReachedThreshold={0.5}
         />
 
-        <View style={[styles.inputWrapper, { backgroundColor: m3.background }]}>
-          {attachments.length > 0 && (
-            <ScrollView horizontal style={styles.previewContainer} showsHorizontalScrollIndicator={false}>
-              {attachments.map((att, i) => (
-                <View key={i} style={styles.previewItem}>
-                  <View style={[styles.filePreview, { borderColor: m3.outline }]}>
-                    <Ionicons name="document" size={24} color={m3.onSurface} />
+        <SafeAreaView edges={["bottom"]}>
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            style={[styles.inputWrapper, { backgroundColor: m3.background, paddingBottom: 12 + keyboardHeight }]}
+            keyboardVerticalOffset={headerHeight}
+          >
+            {attachments.length > 0 && (
+              <ScrollView horizontal style={styles.previewContainer} showsHorizontalScrollIndicator={false}>
+                {attachments.map((att, i) => (
+                  <View key={i} style={styles.previewItem}>
+                    <View style={[styles.filePreview, { borderColor: m3.outline }]}>
+                      <Ionicons name="document" size={24} color={m3.onSurface} />
+                    </View>
+                    <IconButton
+                      icon="close"
+                      size={16}
+                      iconColor={m3.onSurface}
+                      style={styles.removeAttachment}
+                      onPress={() => setAttachments(prev => prev.filter((_, idx) => idx !== i))}
+                    />
                   </View>
+                ))}
+              </ScrollView>
+            )}
+
+            <View style={[styles.innerContainer]}>
+              <View style={styles.inputBarContainer}>
+                <View style={[styles.plusButton, { backgroundColor: m3.secondaryContainer }]}>
                   <IconButton
-                    icon="close"
-                    size={16}
-                    iconColor={m3.onSurface}
-                    style={styles.removeAttachment}
-                    onPress={() => setAttachments(prev => prev.filter((_, idx) => idx !== i))}
+                    icon="plus"
+                    size={26}
+                    iconColor={m3.onSecondaryContainer}
+                    onPress={() => setIsAttachmentMenuOpen(!isAttachmentMenuOpen)}
+                    style={styles.plusIcon}
                   />
                 </View>
-              ))}
-            </ScrollView>
-          )}
-
-          <View style={styles.innerContainer}>
-            <View style={styles.inputBarContainer}>
-              <View style={[styles.plusButton, { backgroundColor: m3.secondaryContainer }]}>
-                <IconButton
-                  icon="plus"
-                  size={26}
-                  iconColor={m3.onSecondaryContainer}
-                  onPress={() => setIsAttachmentMenuOpen(!isAttachmentMenuOpen)}
-                  style={styles.plusIcon}
-                />
-              </View>
-              <View style={[styles.textBoxWrapper, { backgroundColor: m3.surfaceContainerHighest }]}>
-                <TextInput
-                  style={[
-                    styles.textInput,
-                    {
-                      backgroundColor: 'transparent',
-                      color: m3.onSurface,
-                    }
-                  ]}
-                  placeholder="Message"
-                  placeholderTextColor={m3.onSurfaceVariant}
-                  value={inputText}
-                  onChangeText={setInputText}
-                  multiline
-                  selectionColor={m3.primary}
-                />
-                <IconButton
-                  icon="camera"
-                  size={20}
-                  iconColor={m3.onSurfaceVariant}
-                  onPress={() => {}}
-                  style={styles.internalIcon}
-                />
-              </View>
-              <TouchableRipple
-                onPress={handleSend}
-                disabled={!inputText.trim() || sending}
-                style={[styles.circleButton, { backgroundColor: m3.primary }, (!inputText.trim() || sending) && { opacity: 0.5 }]}
-              >
-                <View style={styles.circleButtonContent}>
-                  {sending ? (
-                    <RNPActivityIndicator size="small" color="#fff" />
-                  ) : (
-                    <Ionicons name={inputText.trim().length > 0 ? 'send' : 'mic'} size={20} color="#fff" />
-                  )}
+                <View style={[styles.textBoxWrapper, { backgroundColor: m3.surfaceContainerHighest }]}>
+                  <TextInput
+                    style={[
+                      styles.textInput,
+                      {
+                        backgroundColor: 'transparent',
+                        color: m3.onSurface,
+                      }
+                    ]}
+                    placeholder="Message"
+                    placeholderTextColor={m3.onSurfaceVariant}
+                    value={inputText}
+                    onChangeText={setInputText}
+                    multiline
+                    selectionColor={m3.primary}
+                  />
+                  <IconButton
+                    icon="camera"
+                    size={20}
+                    iconColor={m3.onSurfaceVariant}
+                    onPress={() => {}}
+                    style={styles.internalIcon}
+                  />
                 </View>
-              </TouchableRipple>
+                <TouchableRipple
+                  onPress={handleSend}
+                  disabled={!inputText.trim() || sending}
+                  style={[styles.circleButton, { backgroundColor: m3.primary }, (!inputText.trim() || sending) && { opacity: 0.5 }]}
+                >
+                  <View style={styles.circleButtonContent}>
+                    {sending ? (
+                      <RNPActivityIndicator size="small" color="#fff" />
+                    ) : (
+                      <Ionicons name={inputText.trim().length > 0 ? 'send' : 'mic'} size={20} color="#fff" />
+                    )}
+                  </View>
+                </TouchableRipple>
+              </View>
             </View>
-          </View>
-        </View>
+          </KeyboardAvoidingView>
+        </SafeAreaView>
       </KeyboardAvoidingView>
 
-      <Menu
-        visible={menuVisible}
-        onDismiss={closeMenu}
-        anchor={menuAnchor}
-      >
-        <Menu.Item onPress={() => selectedMessage && copyToClipboard(selectedMessage.content)} title="Copy" leadingIcon="content-copy" />
-        {selectedMessage?.sender_id === user?.id && (
-          <Menu.Item onPress={() => selectedMessage && deleteMessage(selectedMessage.id)} title="Delete" titleStyle={{ color: m3.error }} leadingIcon="delete" />
-        )}
-      </Menu>
+      <MessageContextMenu />
     </View>
   );
 }
@@ -666,7 +764,7 @@ export default function SingleChatScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   listContent: { paddingHorizontal: 16, paddingVertical: 10 },
-  bubble: { paddingHorizontal: 10, paddingVertical: 2, overflow: 'visible' },
+  bubble: { paddingHorizontal: 8, paddingVertical: 0, overflow: 'visible' },
   attachmentContainer: { marginBottom: 8 },
   fileAttachment: { flexDirection: 'row', alignItems: 'center', padding: 12, borderRadius: 12, gap: 8, maxWidth: 200 },
   metadataContainer: { flexDirection: 'row', alignItems: 'center', marginTop: 0 },
@@ -786,5 +884,25 @@ const styles = StyleSheet.create({
     top: 100,
     right: 16,
     width: 200,
+  },
+  customMenu: {
+    borderRadius: 12,
+    overflow: 'hidden',
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    zIndex: 1000,
+  },
+  menuItem: {
+    paddingVertical: 4,
+  },
+  menuItemContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
   },
 });

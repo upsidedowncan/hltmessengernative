@@ -53,10 +53,54 @@ export default function AIChatListScreen() {
     ]);
   };
 
+  const renderConversationItem = (item: AIConversation) => {
+    const content = (
+      <View style={styles.textContainer}>
+        <View style={styles.headerRow}>
+          <Text style={[styles.title, { color: theme.text }]}>
+            {item.title}
+          </Text>
+          <Text style={[styles.time, { color: theme.tabIconDefault }]}>
+            {new Date(item.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          </Text>
+        </View>
+        <Text
+          numberOfLines={1}
+          style={[styles.subtitle, { color: theme.tabIconDefault }]}
+        >
+          {item.preview || 'No messages yet'}
+        </Text>
+      </View>
+    );
+
+    return (
+      <TouchableOpacity
+        key={item.id}
+        onPress={() => router.push({ pathname: '/ai-chat/[id]', params: { id: item.id, conversationId: item.id } })}
+        onLongPress={() => handleDelete(item.id)}
+        activeOpacity={0.7}
+      >
+        {isLiquidGlassSupported ? (
+          <LiquidGlassView
+            style={styles.itemContainer}
+            interactive
+            effect="clear"
+          >
+            {content}
+          </LiquidGlassView>
+        ) : (
+          <View style={[styles.itemContainer, { backgroundColor: theme.cardBackground }]}>
+            {content}
+          </View>
+        )}
+      </TouchableOpacity>
+    );
+  };
+
   return (
       <View style={{ flex: 1, backgroundColor: '#000' }}>
         <ScrollView
-          contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 100 }]}
+          contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 16 }]}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); loadConversations(); }} tintColor={theme.tint} />}
         >
           {!loading && conversations.length === 0 && (
@@ -65,42 +109,18 @@ export default function AIChatListScreen() {
             </View>
           )}
 
-          <LiquidGlassContainerView spacing={0}>
-            {conversations.map(item => (
-              <TouchableOpacity
-                key={item.id}
-                onPress={() => router.push({ pathname: '/ai-chat/[id]', params: { id: item.id, conversationId: item.id } })}
-                onLongPress={() => handleDelete(item.id)}
-                activeOpacity={0.7}
-              >
-                <LiquidGlassView
-                  style={styles.itemContainer}
-                  interactive
-                  effect="clear"
-                >
-                  <View style={styles.textContainer}>
-                    <View style={styles.headerRow}>
-                      <Text style={[styles.title, { color: theme.text }]}>
-                        {item.title}
-                      </Text>
-                      <Text style={[styles.time, { color: theme.tabIconDefault }]}>
-                        {new Date(item.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      </Text>
-                    </View>
-                    <Text
-                      numberOfLines={1}
-                      style={[styles.subtitle, { color: theme.tabIconDefault }]}
-                    >
-                      {item.preview || 'No messages yet'}
-                    </Text>
-                  </View>
-                </LiquidGlassView>
-              </TouchableOpacity>
-            ))}
-          </LiquidGlassContainerView>
+          {isLiquidGlassSupported ? (
+            <LiquidGlassContainerView spacing={0}>
+              {conversations.map(item => renderConversationItem(item))}
+            </LiquidGlassContainerView>
+          ) : (
+            <View style={styles.fallbackContainer}>
+              {conversations.map(item => renderConversationItem(item))}
+            </View>
+          )}
         </ScrollView>
 
-        <View style={[styles.fabContainer, { bottom: insets.bottom + 20 }]}>
+        <View style={[styles.fabContainer, { bottom: insets.bottom + 16 }]}>
           <Host>
           <Button
             onPress={handleCreateNew}
@@ -127,6 +147,9 @@ export default function AIChatListScreen() {
       right: 20,
       height: 50,
     },
+    fallbackContainer: {
+      gap: 8,
+    },
     itemContainer: {
       paddingVertical: 16,
       paddingHorizontal: 20,
@@ -151,4 +174,4 @@ export default function AIChatListScreen() {
     subtitle: {
       fontSize: 14,
     }
-});
+  });

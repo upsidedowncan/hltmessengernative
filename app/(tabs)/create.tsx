@@ -3,7 +3,7 @@ import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { Text, Surface, useTheme as usePaperTheme } from 'react-native-paper';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaInsets, SafeAreaView } from 'react-native-safe-area-context';
 
 export default function CreateScreen() {
   const router = useRouter();
@@ -11,7 +11,7 @@ export default function CreateScreen() {
   const insets = useSafeAreaInsets();
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.background, paddingTop: insets.top }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <Text variant="headlineMedium" style={[styles.title, { color: theme.colors.onBackground }]}>
         New Chat
       </Text>
@@ -52,21 +52,22 @@ export default function CreateScreen() {
           </Surface>
         </TouchableOpacity>
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 24,
+    padding: 16,
   },
   title: {
     fontWeight: 'bold',
     marginBottom: 8,
+    marginTop: 8,
   },
   subtitle: {
-    marginBottom: 32,
+    marginBottom: 24,
   },
   optionsContainer: {
     gap: 16,

@@ -2,7 +2,7 @@ import React, { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, FlatList, RefreshControl, Alert } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaInsets, SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../src/context/ThemeContext';
 import { AIService, AIConversation } from '../../src/services/AIService';
 import { ChatListElement } from '../../src/components/ChatListElement';
@@ -65,16 +65,16 @@ export default function AIChatListScreen() {
   );
 
   return (
-    <View style={{ flex: 1 }}>
+    <SafeAreaView style={{ flex: 1 }} edges={['top', 'right', 'left']}>
       <FlatList
         data={conversations}
         keyExtractor={item => item.id}
         renderItem={renderItem}
-        contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 100 }]}
+        contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 16 }]}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); loadConversations(); }} tintColor={theme.tint} />}
         ListEmptyComponent={!loading ? <View style={styles.empty}><Text style={{ color: theme.tabIconDefault }}>No chats yet. Start one!</Text></View> : null}
       />
-      <View style={[styles.fabContainer, { bottom: insets.bottom + 20 }]}>
+      <View style={[styles.fabContainer, { bottom: insets.bottom + 16 }]}>
         <Button
           onPress={handleCreateNew}
           variant="default"
@@ -82,7 +82,7 @@ export default function AIChatListScreen() {
         Create New
         </Button>
       </View>
-    </View>
+    </SafeAreaView>
   );
 };
 

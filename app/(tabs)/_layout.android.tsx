@@ -1,22 +1,21 @@
 import { NativeTabs, Icon, Label, VectorIcon } from 'expo-router/unstable-native-tabs';
 import { Ionicons } from '@expo/vector-icons';
-import { useMaterial3Theme } from '@pchmn/expo-material3-theme';
-import { SafeAreaView } from 'react-native-safe-area-context'
 import { useTheme } from '../../src/context/ThemeContext';
+import { useMaterial3Theme } from '@pchmn/expo-material3-theme';
 
 export default function TabLayout() {
   const { isDarkMode } = useTheme();
-  const { theme } = useMaterial3Theme();
-  const m3 = theme[isDarkMode ? 'dark' : 'light'];
+  const { theme: m3Theme } = useMaterial3Theme();
+  const m3 = m3Theme[isDarkMode ? 'dark' : 'light'];
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: m3.background }}>
     <NativeTabs
       backgroundColor={m3.surface}
-        iconColor={{
-          default: m3.onSurfaceVariant,
-          selected: m3.onSurface,
-        }}
+      iconColor={{
+        default: m3.onSurfaceVariant,
+        selected: m3.onSurface,
+      }}
+      tintColor={m3.primary}
       labelStyle={{
         color: m3.onSurface,
       }}
@@ -53,6 +52,5 @@ export default function TabLayout() {
         }} />
       </NativeTabs.Trigger>
     </NativeTabs>
-    </SafeAreaView>
   );
 }

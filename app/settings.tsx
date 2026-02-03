@@ -1,12 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View, Switch as RNSwitch, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTheme, ThemeMode } from '../src/context/ThemeContext';
 import { Button, Tile, ProfileHeader, AppBar } from '../src/components';
 import { useAuth } from '../src/context/AuthContext';
 import { NotificationSetup } from '../src/components/NotificationSetup';
 import { supabase } from '../src/services/supabase';
-import { Switch, Host } from '@expo/ui/swift-ui';
 
 export default function SettingsScreen() {
   const { theme, themeMode, setThemeMode } = useTheme();
@@ -35,7 +34,7 @@ export default function SettingsScreen() {
     }
 
     if (!user) return;
-    if (newUsername.length < 3) return; 
+    if (newUsername.length < 3) return;
 
     setIsSaving(true);
     typingTimeoutRef.current = setTimeout(async () => {
@@ -54,7 +53,7 @@ export default function SettingsScreen() {
       } finally {
         setIsSaving(false);
       }
-    }, 1000); 
+    }, 1000);
   };
 
   const onUsernameChange = (text: string) => {
@@ -98,14 +97,12 @@ export default function SettingsScreen() {
             onPress={() => setThemeMode(themeMode === 'dark' ? 'light' : 'dark')}
             groupPosition="middle"
             rightElement={
-              <Host>
-              <Switch
+              <RNSwitch
                 value={themeMode === 'dark'}
                 onValueChange={(val) => setThemeMode(val ? 'dark' : 'light')}
-                color={theme.tint}
-                variant="switch"
+                trackColor={{ false: '#767577', true: theme.tint }}
+                thumbColor="#fff"
               />
-              </Host>
             }
           />
           <Tile
@@ -114,20 +111,36 @@ export default function SettingsScreen() {
             onPress={() => setThemeMode(themeMode === 'system' ? 'light' : 'system')}
             groupPosition="bottom"
             rightElement={
-              <Host>
-              <Switch
+              <RNSwitch
                 value={themeMode === 'system'}
                 onValueChange={(val) => setThemeMode(val ? 'system' : 'light')}
-                color={theme.tint}
-                variant="switch"
+                trackColor={{ false: '#767577', true: theme.tint }}
+                thumbColor="#fff"
               />
-              </Host>
             }
             chevron={false}
           />
         </View>
         <View style={{ paddingHorizontal: 24 }}>
           <NotificationSetup />
+        </View>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={[styles.sectionTitle, { color: theme.text }]}>Security</Text>
+        <View style={styles.groupContainer}>
+          <Tile
+            title="Location Security"
+            icon="location-outline"
+            onPress={() => router.push('/security-settings')}
+            groupPosition="top"
+          />
+          <Tile
+            title="Trusted Devices"
+            icon="phone-portrait-outline"
+            onPress={() => {}}
+            groupPosition="bottom"
+          />
         </View>
       </View>
 
@@ -163,7 +176,7 @@ export default function SettingsScreen() {
       </View>
     </ScrollView>
   );
-};
+}
 
 const styles = StyleSheet.create({
   container: {

@@ -13,3 +13,4 @@ export * from './ChatListElement';
 export * from './Toast';
 export * from './ProfileHeader';
 export * from './FloatingActionButton';
+export * from './SettingsTile';

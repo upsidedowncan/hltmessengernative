@@ -2,7 +2,7 @@ import React, { useState, useCallback, useLayoutEffect } from 'react';
 import { View, Text, StyleSheet, SectionList, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useNavigation, useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaInsets, SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../../src/services/supabase';
 import { AIService, AIConversation } from '../../../src/services/AIService';
@@ -39,11 +39,11 @@ type SectionData = {
   type: 'chat' | 'ai' | 'friend';
 };
 
-const Avatar = ({ name }: { name: string }) => {
+const Avatar = ({ name, backgroundColor }: { name: string; backgroundColor: string }) => {
   const initials = name ? name.substring(0, 2).toUpperCase() : '??';
   return (
-    <View style={[styles.avatar, { backgroundColor: '#333' }]}>
-      <Text style={[styles.avatarText, { color: '#fff' }]}>{initials}</Text>
+    <View style={[styles.avatar, { backgroundColor }]}>
+      <Text style={styles.avatarText}>{initials}</Text>
     </View>
   );
 };
@@ -167,7 +167,7 @@ export default function SearchScreen() {
             }
           })}
         >
-          <Avatar name={friend.friend_profile?.full_name || friend.friend_profile?.username || '?'} />
+          <Avatar name={friend.friend_profile?.full_name || friend.friend_profile?.username || '?'} backgroundColor={theme.tint} />
           <View style={styles.textContainer}>
             <Text style={[styles.name, { color: theme.text }]}>{friend.friend_profile?.full_name}</Text>
             <Text style={[styles.subtext, { color: theme.tabIconDefault }]}>@{friend.friend_profile?.username}</Text>
@@ -191,7 +191,7 @@ export default function SearchScreen() {
             }
           })}
         >
-          <Avatar name={chat.full_name || chat.username} />
+          <Avatar name={chat.full_name || chat.username} backgroundColor={theme.tint} />
           <View style={styles.textContainer}>
             <Text style={[styles.name, { color: theme.text }]}>{chat.full_name || chat.username}</Text>
             <Text numberOfLines={1} style={[styles.subtext, { color: theme.tabIconDefault }]}>
@@ -233,7 +233,7 @@ export default function SearchScreen() {
   const sections = getFilteredSections();
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.background }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]} edges={['top', 'right', 'left']}>
       {loading && !searchQuery ? (
          <View style={styles.center}>
              <ActivityIndicator size="large" color={theme.tint} />
@@ -248,7 +248,7 @@ export default function SearchScreen() {
               <Text style={[styles.sectionHeaderText, { color: theme.tint }]}>{title}</Text>
             </View>
           )}
-          contentContainerStyle={{ paddingBottom: insets.bottom + 20 }}
+          contentContainerStyle={{ paddingBottom: insets.bottom + 16 }}
           ListEmptyComponent={
             searchQuery ? (
               <View style={styles.center}>
@@ -265,8 +265,8 @@ export default function SearchScreen() {
           }
           stickySectionHeadersEnabled={false}
         />
-      )}
-    </View>
+       )}
+    </SafeAreaView>
   );
 }
 
@@ -308,6 +308,7 @@ const styles = StyleSheet.create({
   avatarText: {
     fontSize: 16,
     fontWeight: '600',
+    color: '#fff',
   },
   textContainer: {
     flex: 1,

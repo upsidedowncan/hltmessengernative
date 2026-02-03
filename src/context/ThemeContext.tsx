@@ -6,6 +6,7 @@ import { Colors } from '../constants/Colors';
 export type ThemeMode = 'light' | 'dark' | 'system';
 
 interface ThemeContextType {
+  mode: ThemeMode;
   themeMode: ThemeMode;
   setThemeMode: (mode: ThemeMode) => Promise<void>;
   isDarkMode: boolean;
@@ -51,7 +52,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const theme = { ...Colors[isDarkMode ? 'dark' : 'light'] };
 
   return (
-    <ThemeContext.Provider value={{ themeMode, setThemeMode, isDarkMode, theme, systemColorScheme }}>
+    <ThemeContext.Provider value={{ mode: themeMode, themeMode, setThemeMode, isDarkMode, theme, systemColorScheme }}>
       {children}
     </ThemeContext.Provider>
   );
@@ -63,4 +64,16 @@ export const useTheme = () => {
     throw new Error('useTheme must be used within a ThemeProvider');
   }
   return context;
+};
+
+// Helper hook for theme mode specifically
+export const useThemeMode = () => {
+  const context = useContext(ThemeContext);
+  if (context === undefined) {
+    throw new Error('useThemeMode must be used within a ThemeProvider');
+  }
+  return {
+    mode: context.mode,
+    setMode: context.setThemeMode
+  };
 };

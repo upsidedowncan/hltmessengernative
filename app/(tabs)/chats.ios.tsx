@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '../../src/services/supabase';
 import { useAuth } from '../../src/context/AuthContext';
 import { useTheme } from '../../src/context/ThemeContext';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
 type ChatPreview = {
@@ -19,10 +20,10 @@ type ChatPreview = {
   unread_count: number;
 };
 
-const Avatar = ({ name }: { name: string }) => {
+const Avatar = ({ name, backgroundColor }: { name: string; backgroundColor: string }) => {
   const initials = name ? name.substring(0, 2).toUpperCase() : '??';
   return (
-    <View style={styles.avatar}>
+    <View style={[styles.avatar, { backgroundColor }]}>
       <Text style={styles.avatarText}>{initials}</Text>
     </View>
   );
@@ -81,10 +82,66 @@ export default function ChatScreen() {
     return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
   };
 
+  const renderChatItem = (item: ChatPreview) => {
+    const content = (
+      <>
+        <Avatar name={item.full_name || item.username} backgroundColor={theme.tint} />
+        <View style={styles.textContainer}>
+          <View style={styles.headerRow}>
+            <Text style={[styles.name, { color: theme.text }]}>
+              {item.full_name || item.username}
+            </Text>
+            <Text style={[styles.time, { color: theme.tabIconDefault }]}>
+              {formatTime(item.last_message_at)}
+            </Text>
+          </View>
+          <View style={styles.messageRow}>
+            <Text
+              numberOfLines={1}
+              style={[
+                styles.message,
+                {
+                  flex: 1,
+                  fontWeight: item.unread_count > 0 ? '600' : '400',
+                  color: item.unread_count > 0 ? theme.text : theme.tabIconDefault
+                }
+              ]}
+            >
+              {item.last_message}
+            </Text>
+            {item.unread_count > 0 && (
+              <View style={[styles.unreadBadge, { backgroundColor: '#FF3B30' }]}>
+                <Text style={styles.unreadText}>{item.unread_count}</Text>
+              </View>
+            )}
+          </View>
+        </View>
+      </>
+    );
+
+    return (
+      <TouchableOpacity key={item.friend_id} onPress={() => openChat(item)} activeOpacity={0.7}>
+        {isLiquidGlassSupported ? (
+          <LiquidGlassView
+            style={styles.itemContainer}
+            interactive
+            effect="clear"
+          >
+            {content}
+          </LiquidGlassView>
+        ) : (
+          <View style={[styles.itemContainer, { backgroundColor: theme.cardBackground }]}>
+            {content}
+          </View>
+        )}
+      </TouchableOpacity>
+    );
+  };
+
   return (
-    <View style={[styles.container, { backgroundColor: theme.background }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]} edges={['top', 'right', 'left']}>
       <ScrollView
-        contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 80 }]}
+        contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 16 }]}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -100,51 +157,17 @@ export default function ChatScreen() {
           </View>
         )}
         
-        <LiquidGlassContainerView spacing={0}>
-          {chats.map((item) => (
-            <TouchableOpacity key={item.friend_id} onPress={() => openChat(item)} activeOpacity={0.7}>
-              <LiquidGlassView
-                style={styles.itemContainer}
-                interactive
-                effect="clear"
-              >
-                <Avatar name={item.full_name || item.username} />
-                <View style={styles.textContainer}>
-                  <View style={styles.headerRow}>
-                    <Text style={[styles.name, { color: theme.text }]}>
-                      {item.full_name || item.username}
-                    </Text>
-                    <Text style={[styles.time, { color: theme.tabIconDefault }]}>
-                      {formatTime(item.last_message_at)}
-                    </Text>
-                  </View>
-                  <View style={styles.messageRow}>
-                    <Text
-                      numberOfLines={1}
-                      style={[
-                        styles.message,
-                        {
-                          flex: 1,
-                          fontWeight: item.unread_count > 0 ? '600' : '400',
-                          color: item.unread_count > 0 ? theme.text : theme.tabIconDefault
-                        }
-                      ]}
-                    >
-                      {item.last_message}
-                    </Text>
-                    {item.unread_count > 0 && (
-                      <View style={[styles.unreadBadge, { backgroundColor: '#FF3B30' }]}>
-                        <Text style={styles.unreadText}>{item.unread_count}</Text>
-                      </View>
-                    )}
-                  </View>
-                </View>
-              </LiquidGlassView>
-            </TouchableOpacity>
-          ))}
-        </LiquidGlassContainerView>
+        {isLiquidGlassSupported ? (
+          <LiquidGlassContainerView spacing={0}>
+            {chats.map((item) => renderChatItem(item))}
+          </LiquidGlassContainerView>
+        ) : (
+          <View style={styles.fallbackContainer}>
+            {chats.map((item) => renderChatItem(item))}
+          </View>
+        )}
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -156,6 +179,9 @@ const styles = StyleSheet.create({
     paddingTop: 60,
     paddingVertical: 8,
     paddingHorizontal: 16,
+  },
+  fallbackContainer: {
+    gap: 8,
   },
   itemContainer: {
     flexDirection: 'row',
@@ -171,9 +197,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 16,
-    // Removed solid background
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)'
   },
   avatarText: {
     fontSize: 18,

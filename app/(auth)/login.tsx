@@ -21,7 +21,7 @@ export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  
+
   const { theme } = useTheme();
 
   const handleLogin = async () => {
@@ -29,16 +29,25 @@ export default function LoginScreen() {
       Alert.alert('Error', 'Please enter both email and password.');
       return;
     }
-    setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
 
-    if (error) {
-      Alert.alert('Login Failed', error.message);
+    setLoading(true);
+
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) {
+        Alert.alert('Login Failed', error.message);
+      } else {
+        router.replace('/security-verification?justLoggedIn=true');
+      }
+    } catch (error: any) {
+      Alert.alert('Login Error', error.message || 'An unexpected error occurred.');
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const handleGoogleLogin = async () => {
@@ -73,7 +82,7 @@ export default function LoginScreen() {
                   placeholderTextColor={theme.tabIconDefault}
                 />
               </View>
-              
+
               <View>
                 <Text style={[styles.label, { color: theme.text }]}>Password</Text>
                 <TextInput
@@ -131,7 +140,7 @@ export default function LoginScreen() {
       </ScrollView>
     </KeyboardAvoidingView>
   );
-};
+}
 
 const styles = StyleSheet.create({
   container: {

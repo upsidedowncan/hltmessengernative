@@ -2,7 +2,7 @@ import React, { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaInsets, SafeAreaView } from 'react-native-safe-area-context';
 import { supabase } from '../../src/services/supabase';
 import { useAuth } from '../../src/context/AuthContext';
 import { useTheme } from '../../src/context/ThemeContext';
@@ -18,11 +18,11 @@ type ChatPreview = {
   unread_count: number;
 };
 
-const Avatar = ({ name }: { name: string }) => {
+const Avatar = ({ name, backgroundColor }: { name: string; backgroundColor: string }) => {
   const initials = name ? name.substring(0, 2).toUpperCase() : '??';
   return (
-    <View style={[styles.avatar, { backgroundColor: '#333' }]}>
-      <Text style={[styles.avatarText, { color: '#fff' }]}>{initials}</Text>
+    <View style={[styles.avatar, { backgroundColor }]}>
+      <Text style={styles.avatarText}>{initials}</Text>
     </View>
   );
 };
@@ -81,12 +81,12 @@ export default function ChatScreen() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.background }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]} edges={['top', 'right', 'left']}>
       <AppBar title="Chats" isNative={false} showBackButton={false} />
       <FlatList
         data={chats}
         keyExtractor={item => item.friend_id}
-        contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 80 }]}
+        contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 16 }]}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchChats(); }} tintColor={theme.tint} />
         }
@@ -104,7 +104,7 @@ export default function ChatScreen() {
             activeOpacity={0.7}
             onPress={() => openChat(item)}
           >
-            <Avatar name={item.full_name || item.username} />
+            <Avatar name={item.full_name || item.username} backgroundColor={theme.tint} />
             <View style={styles.textContainer}>
               <View style={styles.headerRow}>
                 <Text style={[styles.name, { color: theme.text }]}>
@@ -128,7 +128,7 @@ export default function ChatScreen() {
           </TouchableOpacity>
         )}
       />
-    </View>
+    </SafeAreaView>
   );
 };
 
@@ -156,6 +156,7 @@ const styles = StyleSheet.create({
   avatarText: {
     fontSize: 18,
     fontWeight: '600',
+    color: '#fff',
   },
   textContainer: {
     flex: 1,

@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaInsets, SafeAreaView } from 'react-native-safe-area-context';
 import { Button, Host } from '@expo/ui/swift-ui';
 import { useTheme } from '../../src/context/ThemeContext';
 
@@ -11,7 +11,7 @@ export default function CreateScreenIOS() {
   const insets = useSafeAreaInsets();
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.background, paddingTop: insets.top }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
       <Text style={[styles.title, { color: theme.text }]}>New Chat</Text>
       <Text style={[styles.subtitle, { color: theme.tabIconDefault }]}>Who do you want to talk to?</Text>
 
@@ -46,24 +46,24 @@ export default function CreateScreenIOS() {
           </Text>
         </View>
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
   },
   title: {
     fontSize: 34,
     fontWeight: 'bold',
-    marginTop: 20,
+    marginTop: 8,
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 17,
-    marginBottom: 40,
+    marginBottom: 32,
   },
   content: {
     gap: 30,

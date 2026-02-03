@@ -1,5 +1,5 @@
-import React, { createContext, useState, useEffect, useContext } from 'react';
-import { Session, User } from '@supabase/supabase-js';
+import React, { createContext, useState, useEffect, useContext, useCallback } from 'react';
+import { Session, User, AuthError } from '@supabase/supabase-js';
 import { supabase } from '../services/supabase';
 
 type Profile = {
@@ -16,6 +16,8 @@ type AuthContextType = {
   loading: boolean;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
+  signInWithEmail: (email: string, password: string) => Promise<{ error?: AuthError; data?: Session }>;
+  signUpWithEmail: (email: string, password: string, fullName: string) => Promise<{ error?: AuthError }>;
 };
 
 const AuthContext = createContext<AuthContextType>({
@@ -25,6 +27,8 @@ const AuthContext = createContext<AuthContextType>({
   loading: true,
   signOut: async () => {},
   refreshProfile: async () => {},
+  signInWithEmail: async () => ({ error: new AuthError('Not implemented') }),
+  signUpWithEmail: async () => ({ error: new AuthError('Not implemented') }),
 });
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
@@ -39,12 +43,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         .from('profiles')
         .select('*')
         .eq('id', userId)
-        .maybeSingle(); // Use maybeSingle to avoid error if row doesn't exist
+        .maybeSingle();
 
       if (error) {
         console.error('Error fetching profile:', error);
       } else {
-        setProfile(data); // data will be null if no row found, which is what we want
+        setProfile(data);
       }
     } catch (error) {
       console.error('Unexpected error fetching profile:', error);
@@ -54,6 +58,88 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const refreshProfile = async () => {
     if (user) {
       await fetchProfile(user.id);
+    }
+  };
+
+  const checkSecurityAndLogin = async (
+    email: string,
+    password: string
+  ): Promise<{ error?: AuthError; data?: Session }> => {
+    try {
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+
+      if (authError) {
+        console.error('Authentication error:', authError);
+        return { error: authError };
+      }
+
+      if (!authData.session) {
+        return { error: new AuthError('No session created') };
+      }
+
+      setSession(authData.session);
+      setUser(authData.session.user);
+      await fetchProfile(authData.session.user.id);
+
+      return { data: authData.session };
+    } catch (error) {
+      console.error('Unexpected login error:', error);
+      return { error: error as AuthError };
+    }
+  };
+
+  const signInWithEmail = async (
+    email: string,
+    password: string
+  ): Promise<{ error?: AuthError; data?: Session }> => {
+    return checkSecurityAndLogin(email, password);
+  };
+
+  const signUpWithEmail = async (
+    email: string,
+    password: string,
+    fullName: string
+  ): Promise<{ error?: AuthError }> => {
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            full_name: fullName
+          }
+        }
+      });
+
+      if (error) {
+        console.error('Signup error:', error);
+        return { error };
+      }
+
+      if (data.user) {
+        const username = email.split('@')[0].toLowerCase().replace(/[^a-z0-9_]/g, '');
+
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .insert({
+            id: data.user.id,
+            username: `${username}_${Date.now().toString(36)}`,
+            full_name: fullName,
+            avatar_url: null
+          });
+
+        if (profileError) {
+          console.error('Profile creation error:', profileError);
+        }
+      }
+
+      return { error: undefined };
+    } catch (error) {
+      console.error('Unexpected signup error:', error);
+      return { error: error as AuthError };
     }
   };
 
@@ -86,7 +172,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ session, user, profile, loading, signOut, refreshProfile }}>
+    <AuthContext.Provider
+      value={{
+        session,
+        user,
+        profile,
+        loading,
+        signOut,
+        refreshProfile,
+        signInWithEmail,
+        signUpWithEmail
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

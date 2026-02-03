@@ -127,7 +127,40 @@ export default function SingleChatScreen() {
   const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
   const [isMenuClosing, setIsMenuClosing] = useState(false);
   const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
+  const [menuOnLeft, setMenuOnLeft] = useState(true);
   const [isNear, setIsNear] = useState(false);
+
+  const menuAnimation = useSharedValue(0);
+  const menuScale = useSharedValue(0);
+  const menuOpacity = useSharedValue(0);
+
+  const closeMenu = () => {
+    menuAnimation.value = withTiming(0, { duration: 200 });
+    menuScale.value = withSpring(0, { damping: 55, stiffness: 520 });
+    menuOpacity.value = withTiming(0, { duration: 150 }, () => {
+      runOnJS(setSelectedMessage)(null);
+      runOnJS(setIsMenuClosing)(false);
+    });
+  };
+
+  const openMenu = (message: Message, x: number, y: number) => {
+    const screenWidth = Dimensions.get('window').width;
+    const menuWidth = Platform.OS === 'ios' ? 250 : 220;
+    const menuHeight = 100;
+    
+    const isLeft = x < screenWidth / 2;
+    setMenuOnLeft(isLeft);
+    
+    setMenuPosition({
+      x: isLeft ? Math.max(16, x - 16) : Math.min(screenWidth - menuWidth + 16, x - menuWidth + 16),
+      y: Math.min(y - 8, Dimensions.get('window').height - menuHeight - 50)
+    });
+    setSelectedMessage(message);
+    setIsMenuClosing(false);
+    menuAnimation.value = withTiming(1, { duration: 200 });
+    menuScale.value = withSpring(1, { damping: 55, stiffness: 520 });
+    menuOpacity.value = withTiming(1, { duration: 150 });
+  };
 
   useEffect(() => {
     if (selectedMessage) {
@@ -152,6 +185,7 @@ export default function SingleChatScreen() {
            LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
            setIsAttachmentOpen(false);
         }
+        closeMenu();
       }
     );
     return () => {
@@ -827,107 +861,71 @@ export default function SingleChatScreen() {
     );
   });
 
-  const MessageContextMenu = ({ 
-    visible, 
-    message, 
-    onClose, 
-    onCopy, 
-    onDelete,
-    position,
-    onUnmount
-  }: { 
-    visible: boolean; 
-    message: Message | null; 
-    onClose: () => void;
-    onCopy: (t: string) => void;
-    onDelete: (id: string) => void;
-    position: { x: number, y: number };
-    onUnmount: () => void;
-  }) => {
-    const [render, setRender] = useState(visible);
-    const [activeMessage, setActiveMessage] = useState<Message | null>(message);
-    const scale = useSharedValue(0);
-    const bgOpacity = useSharedValue(0);
-
-    useEffect(() => {
-      if (visible) {
-        setActiveMessage(message);
-        setRender(true);
-        scale.value = withSpring(1, { damping: 55, stiffness: 520 });
-        bgOpacity.value = withTiming(1, { duration: 200 });
-      } else {
-        bgOpacity.value = withTiming(0, { duration: 200 });
-        scale.value = withSpring(0, { damping: 55, stiffness: 520 }, (finished) => {
-          if (finished) {
-            runOnJS(setRender)(false);
-            runOnJS(setActiveMessage)(null);
-            runOnJS(onUnmount)();
-          }
-        });
-      }
-    }, [visible]);
-
-    const isLeft = position.x < SCREEN_WIDTH / 2;
-    const menuWidth = Platform.OS === 'ios' ? 250 : 200;
+  const MessageContextMenu = () => {
+    const isMyMessage = selectedMessage?.sender_id === user?.id;
+    const menuWidth = Platform.OS === 'ios' ? 250 : 220;
 
     const animatedStyle = useAnimatedStyle(() => ({
-      transform: [{ scale: scale.value }],
-      transformOrigin: [isLeft ? 0 : menuWidth, 0, 0],
-      opacity: interpolate(scale.value, [0, 1], [0, 1]),
+      transform: [{ scale: menuScale.value }],
+      transformOrigin: [menuOnLeft ? 0 : menuWidth, 0, 0],
+      opacity: menuOpacity.value,
     }));
 
-    const bgStyle = useAnimatedStyle(() => ({
-      backgroundColor: `rgba(0,0,0,${interpolate(bgOpacity.value, [0, 1], [0, 0.15])})`,
+    const animatedBackdrop = useAnimatedStyle(() => ({
+      opacity: menuAnimation.value * 0.3,
+      pointerEvents: menuAnimation.value > 0 ? 'auto' : 'none',
     }));
 
-    if (!render || !activeMessage) return null;
-
-    const isMyMessage = activeMessage.sender_id === user?.id;
+    if (!selectedMessage || menuAnimation.value === 0) return null;
 
     return (
-      <Modal transparent visible={render} animationType="none" onRequestClose={onClose}>
-        <Animated.View style={[styles.modalOverlay, bgStyle, { justifyContent: 'flex-start', alignItems: 'flex-start' }]}>
+      <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
+        <Animated.View 
+          style={[StyleSheet.absoluteFill, { backgroundColor: '#000', position: 'absolute' }, animatedBackdrop]} 
+          pointerEvents="auto"
+        >
           <TouchableOpacity 
-            style={StyleSheet.absoluteFill} 
-            activeOpacity={1} 
-            onPress={onClose}
+            style={{ flex: 1 }} 
+            activeOpacity={1}
+            onPress={closeMenu}
           />
-          <Animated.View style={[
-            Platform.OS === 'ios' ? styles.iosMenu : styles.androidMenu, 
-            animatedStyle,
-            { 
-              backgroundColor: isDarkMode ? '#1c1c1e' : '#fff',
-              position: 'absolute',
-              top: Math.min(position.y + 20, Dimensions.get('window').height - 150),
-              left: isLeft ? Math.max(10, position.x) : Math.min(SCREEN_WIDTH - menuWidth - 10, position.x - menuWidth),
-              zIndex: 100,
-            }
-          ]}>
-            {!!activeMessage.content && (
+        </Animated.View>
+        <Animated.View style={[
+          styles.customMenu,
+          animatedStyle,
+          {
+            backgroundColor: isDarkMode ? '#1c1c1e' : '#fff',
+            position: 'absolute',
+            left: menuPosition.x,
+            top: menuPosition.y,
+            width: menuWidth,
+          }
+        ]}>
+          {!!selectedMessage.content && (
+            <TouchableOpacity 
+              style={styles.menuItem} 
+              activeOpacity={0.7}
+              onPress={() => { copyToClipboard(selectedMessage.content); closeMenu(); }}
+            >
+              <Text style={[styles.menuItemText, { color: theme.text }]}>Copy</Text>
+              <Ionicons name="copy-outline" size={Platform.OS === 'ios' ? 20 : 22} color={theme.text} />
+            </TouchableOpacity>
+          )}
+          {isMyMessage && (
+            <>
+              <View style={[styles.menuDivider, { backgroundColor: theme.border }]} />
               <TouchableOpacity 
                 style={styles.menuItem} 
-                onPress={() => { onCopy(activeMessage.content); onClose(); }}
+                activeOpacity={0.7}
+                onPress={() => { deleteMessage(selectedMessage.id); closeMenu(); }}
               >
-                <Text style={[styles.menuItemText, { color: theme.text }]}>Copy</Text>
-                <Ionicons name="copy-outline" size={Platform.OS === 'ios' ? 20 : 24} color={theme.text} />
+                <Text style={[styles.menuItemText, { color: '#FF3B30' }]}>Delete</Text>
+                <Ionicons name="trash-outline" size={Platform.OS === 'ios' ? 20 : 22} color="#FF3B30" />
               </TouchableOpacity>
-            )}
-
-            {isMyMessage && (
-              <>
-                <View style={[styles.menuDivider, { backgroundColor: theme.border }]} />
-                <TouchableOpacity 
-                  style={styles.menuItem} 
-                  onPress={() => { onDelete(activeMessage.id); onClose(); }}
-                >
-                  <Text style={[styles.menuItemText, { color: '#FF3B30' }]}>Delete</Text>
-                  <Ionicons name="trash-outline" size={Platform.OS === 'ios' ? 20 : 24} color="#FF3B30" />
-                </TouchableOpacity>
-              </>
-            )}
-          </Animated.View>
+            </>
+          )}
         </Animated.View>
-      </Modal>
+      </View>
     );
   };
 
@@ -1009,9 +1007,7 @@ export default function SingleChatScreen() {
               isMenuClosing={isMenuClosing && selectedMessage?.id === item.id}
               onLongPress={(m, x, y) => {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                setMenuPosition({ x, y });
-                setIsMenuClosing(false);
-                setSelectedMessage(m);
+                openMenu(m, x, y);
               }}
             />
           )}
@@ -1143,18 +1139,7 @@ export default function SingleChatScreen() {
         )}
       />
 
-      <MessageContextMenu 
-        visible={!!selectedMessage && !isMenuClosing}
-        message={selectedMessage}
-        position={menuPosition}
-        onClose={() => setIsMenuClosing(true)}
-        onUnmount={() => {
-          setSelectedMessage(null);
-          setIsMenuClosing(false);
-        }}
-        onCopy={copyToClipboard}
-        onDelete={deleteMessage}
-      />
+      <MessageContextMenu />
     </View>
   );
 };
@@ -1279,5 +1264,15 @@ const styles = StyleSheet.create({
   menuDivider: {
     height: StyleSheet.hairlineWidth,
     width: '100%',
+  },
+  customMenu: {
+    borderRadius: 14,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.15,
+    shadowRadius: 20,
+    elevation: 8,
+    zIndex: 1000,
   },
 });

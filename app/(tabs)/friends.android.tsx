@@ -282,7 +282,7 @@ export default function FriendsScreen() {
       <FlatList
         data={searchQuery.length > 0 ? (searchResults as any[]) : (friends as any[])}
         keyExtractor={item => item.id}
-        contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 80 }]}
+        contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 16 }]}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}

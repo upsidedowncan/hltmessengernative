@@ -95,7 +95,7 @@ export default function ChatScreen() {
       <FlatList
         data={chats}
         keyExtractor={item => item.friend_id}
-        contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 80 }]}
+        contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 16 }]}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}

@@ -15,7 +15,7 @@ import { supabase } from '../../src/services/supabase';
 import { useAuth } from '../../src/context/AuthContext';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaInsets, SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../src/context/ThemeContext';
 import { List } from '@expo/ui/swift-ui';
 
@@ -34,10 +34,10 @@ type Friendship = {
   friend_profile?: Profile;
 };
 
-const Avatar = ({ name }: { name: string }) => {
+const Avatar = ({ name, backgroundColor }: { name: string; backgroundColor: string }) => {
   const initials = name ? name.substring(0, 2).toUpperCase() : '??';
   return (
-    <View style={[styles.avatar, { backgroundColor: '#007AFF' }]}>
+    <View style={[styles.avatar, { backgroundColor }]}>
       <Text style={styles.avatarText}>{initials}</Text>
     </View>
   );
@@ -192,7 +192,7 @@ export default function FriendsScreen() {
       onLongPress={() => handleRemoveFriend(item.id, item.friend_profile?.full_name || item.friend_profile?.username || 'User')}
       onPress={() => openChat(item.friend_profile!.id, item.friend_profile!.full_name, item.friend_profile?.avatar_url || null)}
     >
-      <Avatar name={item.friend_profile?.full_name || item.friend_profile?.username || '?'} />
+      <Avatar name={item.friend_profile?.full_name || item.friend_profile?.username || '?'} backgroundColor={theme.tint} />
       <View style={styles.textContainer}>
         <Text style={[styles.name, { color: theme.text }]}>
             {item.friend_profile?.full_name}
@@ -212,7 +212,7 @@ export default function FriendsScreen() {
 
   const renderRequestItem = ({ item }: { item: Friendship }) => (
     <View style={styles.itemContainer}>
-       <Avatar name={item.friend_profile?.full_name || '?'} />
+       <Avatar name={item.friend_profile?.full_name || '?'} backgroundColor={theme.tint} />
        <View style={styles.textContainer}>
         <Text style={[styles.name, { color: theme.text }]}>Request from</Text>
         <Text style={[styles.username, { color: theme.text, fontWeight: 'bold' }]}>
@@ -230,7 +230,7 @@ export default function FriendsScreen() {
 
   const renderSearchResult = ({ item }: { item: Profile }) => (
       <View style={styles.itemContainer}>
-          <Avatar name={item.full_name || item.username} />
+          <Avatar name={item.full_name || item.username} backgroundColor={theme.tint} />
           <View style={styles.textContainer}>
               <Text style={[styles.name, { color: theme.text }]}>{item.full_name}</Text>
               <Text style={[styles.username, { color: theme.tabIconDefault }]}>@{item.username}</Text>
@@ -245,7 +245,7 @@ export default function FriendsScreen() {
   );
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.background }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]} edges={['top', 'right', 'left']}>
       <View style={[styles.header, { borderBottomColor: theme.border }]}>
           <View style={[styles.searchBar, { backgroundColor: theme.cardBackground }]}>
               <Ionicons name="search" size={20} color={theme.tabIconDefault} style={{ marginRight: 8 }} />
@@ -269,7 +269,7 @@ export default function FriendsScreen() {
       <FlatList
         data={searchQuery.length > 0 ? (searchResults as any[]) : (friends as any[])}
         keyExtractor={item => item.id}
-        contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 80 }]}
+        contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 16 }]}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchFriendsAndRequests(); }} tintColor={theme.tint} />}
         ListHeaderComponent={() => (
             <>
@@ -306,7 +306,7 @@ export default function FriendsScreen() {
             ) : null
         )}
       />
-    </View>
+    </SafeAreaView>
   );
 }
 

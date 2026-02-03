@@ -7,7 +7,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  TouchableOpacity,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -18,7 +17,7 @@ import { useTheme } from '../../src/context/ThemeContext';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Appbar, TextInput as PaperInput, Surface, Avatar } from 'react-native-paper';
 import { Button } from '@expo/ui/jetpack-compose';
-import { Ionicons } from '@expo/vector-icons';
+import { SettingsTile } from '../../src/components';
 
 export default function ProfileScreen() {
   const { user, profile, refreshProfile } = useAuth();
@@ -91,7 +90,7 @@ export default function ProfileScreen() {
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <ScrollView contentContainerStyle={[styles.container, { paddingBottom: insets.bottom + 80 }]} showsVerticalScrollIndicator={false}>
+        <ScrollView contentContainerStyle={[styles.container, { paddingBottom: insets.bottom + 16 }]} showsVerticalScrollIndicator={false}>
           <View style={styles.header}>
             <Avatar.Text
               size={100}
@@ -160,14 +159,17 @@ export default function ProfileScreen() {
               {loading ? 'Updating...' : 'Update Profile'}
             </Button>
 
-            <TouchableOpacity onPress={() => router.push('/settings')}>
-              <Surface style={styles.tile} elevation={0}>
-                <View style={styles.tileContent}>
-                  <Avatar.Icon size={24} icon="cog" style={{ backgroundColor: 'transparent' }} color={m3.onSurface} />
-                  <Text style={[styles.tileText, { color: m3.onSurface }]}>Settings</Text>
-                </View>
-              </Surface>
-            </TouchableOpacity>
+            <SettingsTile
+              title="Settings"
+              icon="cog"
+              onPress={() => router.push('/settings')}
+              surfaceColor={m3.surfaceContainerHighest}
+              iconBackgroundColor={m3.surfaceVariant}
+              iconColor={m3.onSurfaceVariant}
+              textColor={m3.onSurface}
+              rightElement="chevron"
+              rippleColor={m3.onSurface + '20'}
+            />
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -177,12 +179,12 @@ export default function ProfileScreen() {
 
 const styles = StyleSheet.create({
   container: {
-    flexGrow: 1,
-    padding: 24,
+    flexGrow:1,
+    padding: 16,
   },
   header: {
     alignItems: 'center',
-    marginBottom: 32,
+    marginBottom: 24,
   },
   avatar: {
     marginBottom: 16,
@@ -198,33 +200,16 @@ const styles = StyleSheet.create({
   },
   form: {
     gap: 16,
-    maxWidth: 500,
     width: '100%',
-    alignSelf: 'center',
   },
   formCard: {
-    padding: 16,
     borderRadius: 12,
     backgroundColor: 'transparent',
   },
   input: {
-    marginBottom: 16,
+    marginBottom: 14,
   },
   button: {
     borderRadius: 20,
-  },
-  tile: {
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    backgroundColor: 'transparent',
-  },
-  tileContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  tileText: {
-    fontSize: 16,
-    marginLeft: 12,
   },
 });

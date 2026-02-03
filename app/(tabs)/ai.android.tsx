@@ -9,7 +9,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { AIService, AIConversation } from '../../src/services/AIService';
 import { ChatListElement } from '../../src/components/ChatListElement';
 import { Appbar, IconButton, FAB } from 'react-native-paper';
-import { Ionicons } from '@expo/vector-icons';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { Button } from '@expo/ui/jetpack-compose';
 
 export default function AIChatListScreen() {
   const { isDarkMode } = useTheme();
@@ -82,7 +83,7 @@ export default function AIChatListScreen() {
             subtitleColor={m3.onSurfaceVariant}
           />
         )}
-        contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 100 }]}
+        contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 16 }]}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -94,8 +95,9 @@ export default function AIChatListScreen() {
         ListEmptyComponent={
           !loading ? (
             <View style={styles.empty}>
-              <IconButton icon="chatbubbles-outline" size={64} iconColor={m3.onSurfaceVariant} />
+              <MaterialCommunityIcons name="chat-question" size={64} color={m3.onSurfaceVariant} />
               <Text style={{ color: m3.onSurfaceVariant, marginTop: 16 }}>No chats yet. Start one!</Text>
+              <FAB style={{ marginTop: 16 }} icon="plus" label="Start Chat" onPress={handleCreateNew} />
             </View>
           ) : null
         }
@@ -103,7 +105,7 @@ export default function AIChatListScreen() {
 
       <FAB
         icon="plus"
-        style={[styles.fab, { bottom: insets.bottom + 80 }]}
+        style={[styles.fab, { bottom: insets.bottom + 16 }]}
         onPress={handleCreateNew}
         loading={creating}
       />

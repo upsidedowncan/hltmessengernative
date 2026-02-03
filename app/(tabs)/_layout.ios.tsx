@@ -1,20 +1,20 @@
 import { NativeTabs, Icon, Label, VectorIcon } from 'expo-router/unstable-native-tabs';
 import { Ionicons } from '@expo/vector-icons';
-import { Platform } from 'react-native';
+import { useTheme } from '../../src/context/ThemeContext';
 
 export default function TabLayout() {
-  const isDark = Platform.OS === 'ios' ? false : false;
-  
+  const { theme } = useTheme();
+
   return (
     <NativeTabs
-      backgroundColor={isDark ? '#1c1c1e' : '#fff'}
+      backgroundColor={theme.background}
       iconColor={{
-        default: isDark ? '#8e8e93' : '#8e8e93',
-        selected: '#007AFF',
+        default: theme.tabIconDefault,
+        selected: theme.tint,
       }}
-      tintColor="#007AFF"
+      tintColor={theme.tint}
       labelStyle={{
-        color: isDark ? '#fff' : '#000',
+        color: theme.text,
       }}
     >
       <NativeTabs.Trigger name="chats">
@@ -46,14 +46,6 @@ export default function TabLayout() {
         <Icon src={{
             default: <VectorIcon family={Ionicons} name="person-circle-outline" />,
             selected: <VectorIcon family={Ionicons} name="person-circle" />
-        }} />
-      </NativeTabs.Trigger>
-
-      <NativeTabs.Trigger name="search" role="search">
-        <Label>Search</Label>
-        <Icon src={{
-            default: <VectorIcon family={Ionicons} name="search" />,
-            selected: <VectorIcon family={Ionicons} name="search" />
         }} />
       </NativeTabs.Trigger>
     </NativeTabs>

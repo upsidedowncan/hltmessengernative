@@ -132,6 +132,24 @@ export default function SettingsScreen() {
         </View>
 
         <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: theme.text }]}>Security</Text>
+          <View style={styles.groupContainer}>
+            <Tile
+              title="Location Security"
+              icon="location-outline"
+              onPress={() => {}}
+              groupPosition="top"
+            />
+            <Tile
+              title="Trusted Devices"
+              icon="phone-portrait-outline"
+              onPress={() => {}}
+              groupPosition="bottom"
+            />
+          </View>
+        </View>
+
+        <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: theme.text }]}>Developer</Text>
           <View style={styles.groupContainer}>
             <Tile

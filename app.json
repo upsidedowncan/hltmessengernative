@@ -34,7 +34,8 @@
         }
       ],
       "react-native-bottom-tabs",
-      "expo-router"
+      "expo-router",
+      "expo-font"
     ],
     "ios": {
       "supportsTablet": true,

@@ -9,7 +9,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaInsets, SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../src/context/AuthContext';
 import { supabase } from '../../src/services/supabase';
 import { useTheme } from '../../src/context/ThemeContext';
@@ -75,12 +75,13 @@ export default function ProfileScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1, backgroundColor: theme.background }}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <AppBar title="Profile" isNative={false} showBackButton={false} />
-      <ScrollView contentContainerStyle={[styles.container, { paddingBottom: insets.bottom + 80 }]} showsVerticalScrollIndicator={false}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: theme.background }} edges={['top', 'right', 'left']}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <AppBar title="Profile" isNative={false} showBackButton={false} />
+        <ScrollView contentContainerStyle={[styles.container, { paddingBottom: insets.bottom + 16 }]} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
           <View style={[styles.avatarContainer, { backgroundColor: (theme as any).secondaryContainer || theme.border, borderColor: theme.tint }]}>
             <Text style={[styles.avatarText, { color: (theme as any).onSecondaryContainer || theme.text }]}>{getInitials()}</Text>
@@ -90,7 +91,6 @@ export default function ProfileScreen() {
         </View>
 
         <View style={styles.form}>
-          <View style={styles.groupContainer}>
             <TextField
               label="Display Name"
               value={fullName}
@@ -108,7 +108,6 @@ export default function ProfileScreen() {
               leftIcon="at-outline"
               groupPosition="bottom"
             />
-          </View>
 
           <Text style={{ color: theme.tabIconDefault, fontSize: 12, marginTop: -8, marginBottom: 8, marginLeft: 4 }}>
             Unique identifier for friends to find you.
@@ -132,20 +131,22 @@ export default function ProfileScreen() {
 
 
         </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
-    padding: 24,
+    padding: 16,
     paddingBottom: 100,
   },
   header: {
     alignItems: 'center',
-    marginBottom: 32,
+    marginTop: 16,
+    marginBottom: 24,
   },
   avatarContainer: {
     width: 100,

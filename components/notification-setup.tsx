@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Linking, Platform, ActivityIndicator } from 'react-native';
 import { supabase } from '@/services/supabase';
 import { Colors } from '@/constants/colors';
-import { useNativePush } from '@/hooks/useNativePush';
+import { useNativePush } from '@/hooks/use-native-push';
 
 const NOTIFICATION_HUB_URL = 'https://hlt-messenger-notifications.vercel.app'; 
 

@@ -1,26 +1,11 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, Dimensions, TouchableWithoutFeedback, Platform, StatusBar } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { callService } from '../../src/services/CallService';
-import { useAuth } from '../../src/context/AuthContext';
-import { useTheme } from '../../src/context/ThemeContext';
-import { useCall } from '../../src/context/CallContext';
-import { Audio } from 'expo-av';
-import Animated, { 
-  useSharedValue, 
-  useAnimatedStyle, 
-  withSpring, 
-  withTiming, 
-  runOnJS,
-  interpolate,
-  Easing,
-} from 'react-native-reanimated';
-import { GestureDetector, Gesture } from 'react-native-gesture-handler';
-import { Ionicons, MaterialIcons } from '@expo/vector-icons';
-import * as Haptics from 'expo-haptics';
-import { BlurView } from 'expo-blur';
-import { Image } from 'expo-image';
-import { CallBackground } from '../../src/components/CallBackground';
+import { callService } from '@/services/CallService';
+import { useAuth } from '@/contexts/AuthContext';
+import { useTheme } from '@/contexts/ThemeContext';
+import { useCall } from '@/contexts/CallContext';
+import { CallBackground } from '@/components/CallBackground';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const PIP_WIDTH = 110;

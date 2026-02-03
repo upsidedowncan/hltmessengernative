@@ -40,12 +40,12 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useMaterial3Theme } from '@pchmn/expo-material3-theme';
 import { Appbar, IconButton, Text as RNPText, Card, Divider, TouchableRipple, ActivityIndicator as RNPActivityIndicator, FAB, Surface, Portal, Dialog, Button, ProgressBar } from 'react-native-paper';
 
-import { supabase } from '../../src/services/supabase';
-import { useAuth } from '../../src/context/AuthContext';
-import { useTheme } from '../../src/context/ThemeContext';
-import { useSendNotification } from '../../src/hooks/useSendNotification';
-import { DeepLinkUserWidget } from '../../src/components/DeepLinkUserWidget.android';
-import { Colors } from '../../src/constants/Colors';
+import { supabase } from '@/services/supabase';
+import { useAuth } from '@/contexts/AuthContext';
+import { useTheme } from '@/contexts/ThemeContext';
+import { useSendNotification } from '@/hooks/useSendNotification';
+import { DeepLinkUserWidget } from '@/components/DeepLinkUserWidget.android';
+import { Colors } from '@/constants/Colors';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 

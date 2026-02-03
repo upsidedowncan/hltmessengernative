@@ -21,26 +21,10 @@ import {
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useTheme } from '../../src/context/ThemeContext';
-import { Host, Button, List } from '@expo/ui/swift-ui';
-import { Ionicons } from '@expo/vector-icons';
-import Markdown from 'react-native-markdown-display';
-import { Audio } from 'expo-av';
-import * as Clipboard from 'expo-clipboard';
-import * as Haptics from 'expo-haptics';
-import { LiquidGlassView, LiquidGlassContainerView, isLiquidGlassSupported } from '@callstack/liquid-glass';
-import { WebView } from 'react-native-webview';
-import Animated, { 
-  useSharedValue, 
-  useAnimatedStyle, 
-  withTiming,
-  useDerivedValue
-} from 'react-native-reanimated';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-
-import { AIService, AISettings, DEFAULT_AI_SETTINGS } from '../../src/services/AIService';
-import { AppBar } from '../../src/components/AppBar';
-import { supabase } from '../../src/services/supabase';
+import { useTheme } from '@/contexts/ThemeContext';
+import { AIService, AISettings, DEFAULT_AI_SETTINGS } from '@/services/AIService';
+import { AppBar } from '@/components/AppBar';
+import { supabase } from '@/services/supabase';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 

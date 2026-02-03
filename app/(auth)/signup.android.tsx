@@ -12,8 +12,8 @@ import {
   ScrollView,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { supabase } from '../../src/services/supabase';
-import { useTheme } from '../../src/context/ThemeContext';
+import { supabase } from '@/services/supabase';
+import { useTheme } from '@/context/ThemeContext';
 import { useMaterial3Theme } from '@pchmn/expo-material3-theme';
 import { Button, Surface, Text as RNPText } from 'react-native-paper';
 

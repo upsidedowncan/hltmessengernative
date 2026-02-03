@@ -39,10 +39,10 @@ import { WebView } from 'react-native-webview';
 import { Audio } from 'expo-av';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import { useTheme } from '../../src/context/ThemeContext';
-import { AppBar } from '../../src/components/AppBar';
-import { supabase } from '../../src/services/supabase';
-import { AIService, AISettings, DEFAULT_AI_SETTINGS } from '../../src/services/AIService';
+import { useTheme } from '@/contexts/ThemeContext';
+import { AppBar } from '@/components/AppBar';
+import { supabase } from '@/services/supabase';
+import { AIService, AISettings, DEFAULT_AI_SETTINGS } from '@/services/AIService';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 

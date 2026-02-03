@@ -8,14 +8,14 @@ import { ThemeProvider, DarkTheme, DefaultTheme } from '@react-navigation/native
 import { Provider as PaperProvider } from 'react-native-paper';
 import { useMaterial3Theme } from '@pchmn/expo-material3-theme';
 
-import { AuthProvider, useAuth } from '../src/context/AuthContext';
-import { SecurityProvider } from '../src/context/SecurityContext';
-import { FeatureFlagProvider, useFeatureFlags } from '../src/context/FeatureFlagContext';
-import { ThemeProvider as CustomThemeProvider, useTheme } from '../src/context/ThemeContext';
-import { CallProvider } from '../src/context/CallContext';
-import { ToastProvider } from '../src/context/ToastContext';
-import { useDeepLinkHandler } from '../src/hooks/useDeepLinkHandler';
-import { HostWrapper } from '../src/components/ui/HostWrapper';
+import { AuthProvider, useAuth } from '@/contexts/auth-context';
+import { SecurityProvider } from '@/contexts/security-context';
+import { FeatureFlagProvider, useFeatureFlags } from '@/contexts/feature-flag-context';
+import { ThemeProvider as CustomThemeProvider, useTheme } from '@/contexts/theme-context';
+import { CallProvider } from '@/contexts/call-context';
+import { ToastProvider } from '@/contexts/toast-context';
+import { useDeepLinkHandler } from '@/hooks/use-deep-link-handler';
+import { HostWrapper } from '@/components/ui/HostWrapper';
 import SecurityBlockOverlay from './SecurityBlockOverlay';
 
 function AuthProtection() {

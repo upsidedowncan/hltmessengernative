@@ -16,9 +16,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { AIService, AISettings, DEFAULT_AI_SETTINGS } from '../src/services/AIService';
-import { useTheme } from '../src/context/ThemeContext';
-import { AppBar } from '../src/components/AppBar';
+import { AIService, AISettings, DEFAULT_AI_SETTINGS } from '@/services/ai-service';
+import { useTheme } from '@/contexts/theme-context';
+import { AppBar } from '@/components/app-bar';
 
 export default function AISettingsScreen() {
   const navigation = useNavigation();

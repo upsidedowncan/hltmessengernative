@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, Text, Pressable, ScrollView } from 'react-native';
-import { useSecurity } from '../src/context/SecurityContext';
-import { useTheme } from '../src/context/ThemeContext';
+import { useSecurity } from '@/contexts/security-context';
+import { useTheme } from '@/contexts/theme-context';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Host, Button, List } from '@expo/ui/swift-ui';
 import { Ionicons } from '@expo/vector-icons';

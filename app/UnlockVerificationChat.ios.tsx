@@ -14,14 +14,10 @@ import {
   Pressable,
   Text,
 } from 'react-native';
-import { useTheme } from '../src/context/ThemeContext';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Host, Button } from '@expo/ui/swift-ui';
-import { Ionicons } from '@expo/vector-icons';
-import Markdown from 'react-native-markdown-display';
-import { useSecurity } from '../src/context/SecurityContext';
-import { AIService, AISettings } from '../src/services/AIService';
-import { supabase } from '../src/services/supabase';
+import { useTheme } from '@/contexts/theme-context';
+import { useSecurity } from '@/contexts/security-context';
+import { AIService, AISettings } from '@/services/ai-service';
+import { supabase } from '@/services/supabase';
 import Animated, { FadeIn } from 'react-native-reanimated';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {

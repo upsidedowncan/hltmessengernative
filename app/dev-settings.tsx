@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, useColorScheme, ScrollView, Switch, Platform, Button, TextInput } from 'react-native';
-import { useFeatureFlags, useTheme } from '../src/context/ThemeContext';
-import { callService } from '../src/services/CallService';
+import { useFeatureFlags, useTheme } from '@/contexts/theme-context';
+import { callService } from '@/services/call-service';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { 
   FadeIn,

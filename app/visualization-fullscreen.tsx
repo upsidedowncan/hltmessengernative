@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useMaterial3Theme } from '@pchmn/expo-material3-theme';
 import { IconButton } from 'react-native-paper';
 import { WebView } from 'react-native-webview';
-import { useTheme } from '../src/context/ThemeContext';
+import { useTheme } from '@/contexts/theme-context';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 

@@ -12,8 +12,8 @@ import {
   ScrollView,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { supabase } from '../../src/services/supabase';
-import { useTheme } from '../../src/context/ThemeContext';
+import { supabase } from '@/services/supabase';
+import { useTheme } from '@/context/ThemeContext';
 import { Host, Button } from '@expo/ui/swift-ui';
 
 export default function SignUpScreen() {

@@ -3,9 +3,9 @@ import { View, Text, StyleSheet, FlatList, RefreshControl, Alert } from 'react-n
 import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets, SafeAreaView } from 'react-native-safe-area-context';
-import { useTheme } from '../../src/context/ThemeContext';
-import { AIService, AIConversation } from '../../src/services/AIService';
-import { ChatListElement } from '../../src/components/ChatListElement';
+import { useTheme } from '@/context/ThemeContext';
+import { AIService, AIConversation } from '@/services/AIService';
+import { ChatListElement } from '@/components/ChatListElement';
 import { Button } from '@expo/ui/jetpack-compose';
 
 export default function AIChatListScreen() {

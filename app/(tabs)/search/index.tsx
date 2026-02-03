@@ -4,10 +4,10 @@ import { useNavigation, useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets, SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { supabase } from '../../../src/services/supabase';
-import { AIService, AIConversation } from '../../../src/services/AIService';
-import { useTheme } from '../../../src/context/ThemeContext';
-import { useAuth } from '../../../src/context/AuthContext';
+import { supabase } from '@/services/supabase';
+import { AIService, AIConversation } from '@/services/AIService';
+import { useTheme } from '@/contexts/ThemeContext';
+import { useAuth } from '@/contexts/AuthContext';
 
 // Types
 type ChatPreview = {

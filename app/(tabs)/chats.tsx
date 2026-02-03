@@ -3,10 +3,10 @@ import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl } fr
 import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets, SafeAreaView } from 'react-native-safe-area-context';
-import { supabase } from '../../src/services/supabase';
-import { useAuth } from '../../src/context/AuthContext';
-import { useTheme } from '../../src/context/ThemeContext';
-import { AppBar } from '../../src/components/AppBar';
+import { supabase } from '@/services/supabase';
+import { useAuth } from '@/context/AuthContext';
+import { useTheme } from '@/context/ThemeContext';
+import { AppBar } from '@/components/AppBar';
 
 type ChatPreview = {
   friend_id: string;

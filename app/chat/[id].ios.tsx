@@ -20,24 +20,11 @@ import {
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useTheme } from '../../src/context/ThemeContext';
-import { useAuth } from '../../src/context/AuthContext';
-import { supabase } from '../../src/services/supabase';
-import { Host, Button, List } from '@expo/ui/swift-ui';
-import { Ionicons } from '@expo/vector-icons';
-import { Image } from 'expo-image';
-import * as Clipboard from 'expo-clipboard';
-import * as Haptics from 'expo-haptics';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withSpring,
-  withTiming,
-  runOnJS,
-} from 'react-native-reanimated';
-import { AppBar } from '../../src/components/AppBar';
-import { useSendNotification } from '../../src/hooks/useSendNotification';
+import { useTheme } from '@/contexts/ThemeContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/services/supabase';
+import { AppBar } from '@/components/AppBar';
+import { useSendNotification } from '@/hooks/useSendNotification';
 import { LiquidGlassView, LiquidGlassContainerView, isLiquidGlassSupported } from '@callstack/liquid-glass';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');

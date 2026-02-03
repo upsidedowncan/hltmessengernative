@@ -3,10 +3,10 @@ import { View, StyleSheet, FlatList, RefreshControl, Alert } from 'react-native'
 import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { supabase } from '../../src/services/supabase';
-import { useAuth } from '../../src/context/AuthContext';
+import { supabase } from '@/services/supabase';
+import { useAuth } from '@/context/AuthContext';
 import { useMaterial3Theme } from '@pchmn/expo-material3-theme';
-import { useTheme } from '../../src/context/ThemeContext';
+import { useTheme } from '@/context/ThemeContext';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Appbar, IconButton, FAB, Text as RNPText, Divider, Chip, TouchableRipple } from 'react-native-paper';
 

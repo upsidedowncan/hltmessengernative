@@ -2,9 +2,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import { StyleSheet, View, FlatList, Animated } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useMaterial3Theme } from '@pchmn/expo-material3-theme';
-import { useThemeMode, useTheme } from '../src/context/ThemeContext';
-import { useAuth } from '../src/context/AuthContext';
-import { supabase } from '../src/services/supabase';
+import { useThemeMode, useTheme } from '@/contexts/theme-context';
+import { useAuth } from '@/contexts/auth-context';
+import { supabase } from '@/services/supabase';
 import {
   Appbar,
   Text as RNPText,

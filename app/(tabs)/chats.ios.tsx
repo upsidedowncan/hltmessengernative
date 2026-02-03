@@ -4,9 +4,9 @@ import { LiquidGlassView, LiquidGlassContainerView, isLiquidGlassSupported } fro
 import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { supabase } from '../../src/services/supabase';
-import { useAuth } from '../../src/context/AuthContext';
-import { useTheme } from '../../src/context/ThemeContext';
+import { supabase } from '@/services/supabase';
+import { useAuth } from '@/context/AuthContext';
+import { useTheme } from '@/context/ThemeContext';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 

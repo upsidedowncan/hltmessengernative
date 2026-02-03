@@ -4,12 +4,9 @@ import { useMaterial3Theme } from '@pchmn/expo-material3-theme';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { AIService, AISettings, DEFAULT_AI_SETTINGS } from '../src/services/AIService';
-import { useTheme } from '../src/context/ThemeContext';
-import { Appbar, SegmentedButtons, TextInput, Button, Surface, Text, ActivityIndicator, IconButton, TouchableRipple } from 'react-native-paper';
-import { Slider } from '@expo/ui/jetpack-compose';
-import { router } from 'expo-router';
-import { SettingsTile } from '../src/components';
+import { AIService, AISettings, DEFAULT_AI_SETTINGS } from '@/services/ai-service';
+import { useTheme } from '@/contexts/theme-context';
+import { SettingsTile } from '@/components';
 
 export default function AISettingsScreen() {
   const navigation = useNavigation();

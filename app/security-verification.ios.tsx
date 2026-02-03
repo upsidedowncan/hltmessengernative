@@ -10,9 +10,9 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useTheme } from '../src/context/ThemeContext';
-import { useAuth } from '../src/context/AuthContext';
-import { useSecurity } from '../src/context/SecurityContext';
+import { useTheme } from '@/contexts/theme-context';
+import { useAuth } from '@/contexts/auth-context';
+import { useSecurity } from '@/contexts/security-context';
 import { Host, Button } from '@expo/ui/swift-ui';
 
 const { width, height } = Dimensions.get('window');

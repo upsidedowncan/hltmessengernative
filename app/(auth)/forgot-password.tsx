@@ -12,8 +12,8 @@ import {
   ScrollView,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { supabase } from '../../src/services/supabase';
-import { useTheme } from '../../src/context/ThemeContext';
+import { supabase } from '@/services/supabase';
+import { useTheme } from '@/context/ThemeContext';
 
 export default function ForgotPasswordScreen() {
   const router = useRouter();

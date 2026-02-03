@@ -10,10 +10,10 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets, SafeAreaView } from 'react-native-safe-area-context';
-import { useAuth } from '../../src/context/AuthContext';
-import { supabase } from '../../src/services/supabase';
-import { useTheme } from '../../src/context/ThemeContext';
-import { Button, TextField, Tile, AppBar } from '../../src/components';
+import { useAuth } from '@/context/AuthContext';
+import { supabase } from '@/services/supabase';
+import { useTheme } from '@/context/ThemeContext';
+import { Button, TextField, Tile, AppBar } from '@/components';
 
 export default function ProfileScreen() {
   const { user, profile, refreshProfile, signOut } = useAuth();

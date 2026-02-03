@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, Text, Pressable, ScrollView } from 'react-native';
-import { useSecurity } from '../src/context/SecurityContext';
+import { useSecurity } from '@/contexts/security-context';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import Animated, {

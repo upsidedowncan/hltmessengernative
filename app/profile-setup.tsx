@@ -10,9 +10,9 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import { useAuth } from '../src/context/AuthContext';
-import { supabase } from '../src/services/supabase';
-import { useTheme } from '../src/context/ThemeContext';
+import { useAuth } from '@/contexts/auth-context';
+import { supabase } from '@/services/supabase';
+import { useTheme } from '@/contexts/theme-context';
 
 export default function ProfileSetupScreen() {
   const { user, refreshProfile, signOut } = useAuth();

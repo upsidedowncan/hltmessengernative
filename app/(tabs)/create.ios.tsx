@@ -3,7 +3,7 @@ import { View, Text, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets, SafeAreaView } from 'react-native-safe-area-context';
 import { Button, Host } from '@expo/ui/swift-ui';
-import { useTheme } from '../../src/context/ThemeContext';
+import { useTheme } from '@/context/ThemeContext';
 
 export default function CreateScreenIOS() {
   const router = useRouter();

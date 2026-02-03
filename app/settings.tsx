@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ScrollView, StyleSheet, Text, View, Switch as RNSwitch, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useTheme, ThemeMode } from '../src/context/ThemeContext';
-import { Button, Tile, ProfileHeader, AppBar } from '../src/components';
-import { useAuth } from '../src/context/AuthContext';
-import { NotificationSetup } from '../src/components/NotificationSetup';
-import { supabase } from '../src/services/supabase';
+import { useTheme, ThemeMode } from '@/contexts/theme-context';
+import { Button, Tile, ProfileHeader, AppBar } from '@/components';
+import { useAuth } from '@/contexts/auth-context';
+import { NotificationSetup } from '@/components/notification-setup';
+import { supabase } from '@/services/supabase';
 
 export default function SettingsScreen() {
   const { theme, themeMode, setThemeMode } = useTheme();

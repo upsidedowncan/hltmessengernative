@@ -12,9 +12,9 @@ import {
   ScrollView,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { supabase } from '../../src/services/supabase';
+import { supabase } from '@/services/supabase';
 import { Ionicons } from '@expo/vector-icons';
-import { useTheme } from '../../src/context/ThemeContext';
+import { useTheme } from '@/context/ThemeContext';
 
 export default function LoginScreen() {
   const router = useRouter();

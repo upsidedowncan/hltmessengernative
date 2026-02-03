@@ -10,15 +10,15 @@ import * as Haptics from 'expo-haptics';
 import Markdown from 'react-native-markdown-display';
 import { useMaterial3Theme } from '@pchmn/expo-material3-theme';
 import { Appbar, IconButton, Text as RNPText, Surface, TouchableRipple, ActivityIndicator as RNPActivityIndicator } from 'react-native-paper';
-import { useTheme } from '../../src/context/ThemeContext';
-import { AIService, AISettings, DEFAULT_AI_SETTINGS } from '../../src/services/AIService';
-import { PythonExecutionService, PythonExecutionResult } from '../../src/services/PythonExecutionService';
-import ChatBubble from '../../src/components/ChatBubble';
-import PythonCodeBlock from '../../src/components/PythonCodeBlock';
-import PythonExecutionResultComponent from '../../src/components/PythonExecutionResult';
-import SystemOutputBlock from '../../src/components/SystemOutputBlock';
-import ImageGenBlock from '../../src/components/ImageGenBlock';
-import VisualizationBlock from '../../src/components/VisualizationBlock';
+import { useTheme } from '@/contexts/ThemeContext';
+import { AIService, AISettings, DEFAULT_AI_SETTINGS } from '@/services/AIService';
+import { PythonExecutionService, PythonExecutionResult } from '@/services/PythonExecutionService';
+import ChatBubble from '@/components/chat-bubble';
+import PythonCodeBlock from '@/components/python-code-block';
+import PythonExecutionResultComponent from '@/components/python-execution-result';
+import SystemOutputBlock from '@/components/system-output-block';
+import ImageGenBlock from '@/components/image-gen-block';
+import VisualizationBlock from '@/components/visualization-block';
 
 const { width } = Dimensions.get('window');
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {

@@ -11,12 +11,12 @@ import {
   RefreshControl
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { supabase } from '../../src/services/supabase';
-import { useAuth } from '../../src/context/AuthContext';
+import { supabase } from '@/services/supabase';
+import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets, SafeAreaView } from 'react-native-safe-area-context';
-import { useTheme } from '../../src/context/ThemeContext';
+import { useTheme } from '@/context/ThemeContext';
 import { List } from '@expo/ui/swift-ui';
 
 type Profile = {

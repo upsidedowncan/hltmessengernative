@@ -1,6 +1,6 @@
 import { NativeTabs, Icon, Label, VectorIcon } from 'expo-router/unstable-native-tabs';
 import { Ionicons } from '@expo/vector-icons';
-import { useTheme } from '../../src/context/ThemeContext';
+import { useTheme } from '@/context/ThemeContext';
 import { useMaterial3Theme } from '@pchmn/expo-material3-theme';
 import { Platform } from 'react-native';
 

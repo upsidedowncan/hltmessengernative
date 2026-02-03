@@ -44,16 +44,16 @@ import Animated, {
 } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 
-import { supabase } from '../../src/services/supabase';
-import { useAuth } from '../../src/context/AuthContext';
-import { useTheme } from '../../src/context/ThemeContext';
-import { useFeatureFlags } from '../../src/context/FeatureFlagContext';
-import { useCall } from '../../src/context/CallContext';
-import { callService } from '../../src/services/CallService';
-import { AppBar } from '../../src/components/AppBar';
-import { useSendNotification } from '../../src/hooks/useSendNotification';
-import { DeepLinkUserWidget } from '../../src/components/DeepLinkUserWidget';
-import { Colors } from '../../src/constants/Colors';
+import { supabase } from '@/services/supabase';
+import { useAuth } from '@/contexts/AuthContext';
+import { useTheme } from '@/contexts/ThemeContext';
+import { useFeatureFlags } from '@/contexts/FeatureFlagContext';
+import { useCall } from '@/contexts/CallContext';
+import { callService } from '@/services/CallService';
+import { AppBar } from '@/components/AppBar';
+import { useSendNotification } from '@/hooks/useSendNotification';
+import { DeepLinkUserWidget } from '@/components/DeepLinkUserWidget';
+import { Colors } from '@/constants/Colors';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 

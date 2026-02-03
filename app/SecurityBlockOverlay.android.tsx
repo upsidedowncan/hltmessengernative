@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, ScrollView } from 'react-native';
-import { useSecurity } from '../src/context/SecurityContext';
+import { useSecurity } from '@/contexts/security-context';
 import { useMaterial3Theme } from '@pchmn/expo-material3-theme';
-import { useTheme } from '../src/context/ThemeContext';
+import { useTheme } from '@/contexts/theme-context';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Surface, Text, IconButton, List, Divider, Button } from 'react-native-paper';
 import Animated, {

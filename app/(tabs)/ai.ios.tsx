@@ -3,8 +3,8 @@ import { View, Text, StyleSheet, RefreshControl, Alert, ScrollView, TouchableOpa
 import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useTheme } from '../../src/context/ThemeContext';
-import { AIService, AIConversation } from '../../src/services/AIService';
+import { useTheme } from '@/context/ThemeContext';
+import { AIService, AIConversation } from '@/services/AIService';
 import { Button, Host } from '@expo/ui/swift-ui';
 import { LiquidGlassContainerView, LiquidGlassView, isLiquidGlassSupported } from '@callstack/liquid-glass';
 

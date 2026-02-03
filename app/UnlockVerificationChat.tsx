@@ -13,22 +13,10 @@ import {
   Keyboard
 } from 'react-native';
 import { useMaterial3Theme } from '@pchmn/expo-material3-theme';
-import { useTheme } from '../src/context/ThemeContext';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import {
-  Appbar,
-  IconButton,
-  Text as RNPText,
-  Surface,
-  TouchableRipple,
-  ActivityIndicator as RNPActivityIndicator,
-  Button
-} from 'react-native-paper';
-import { Ionicons } from '@expo/vector-icons';
-import Markdown from 'react-native-markdown-display';
-import { useSecurity } from '../src/context/SecurityContext';
-import { AIService, AISettings } from '../src/services/AIService';
-import { supabase } from '../src/services/supabase';
+import { useTheme } from '@/contexts/theme-context';
+import { useSecurity } from '@/contexts/security-context';
+import { AIService, AISettings } from '@/services/ai-service';
+import { supabase } from '@/services/supabase';
 import Animated, {
   FadeIn
 } from 'react-native-reanimated';

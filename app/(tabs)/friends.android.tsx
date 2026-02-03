@@ -11,13 +11,13 @@ import {
   RefreshControl
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { supabase } from '../../src/services/supabase';
-import { useAuth } from '../../src/context/AuthContext';
+import { supabase } from '@/services/supabase';
+import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useMaterial3Theme } from '@pchmn/expo-material3-theme';
-import { useTheme } from '../../src/context/ThemeContext';
+import { useTheme } from '@/context/ThemeContext';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Appbar, Surface, Searchbar, Chip, Button, IconButton } from 'react-native-paper';
 

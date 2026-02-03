@@ -9,7 +9,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaInsets, SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/contexts/auth-context';
 import { supabase } from '@/services/supabase';
 import { useMaterial3Theme } from '@pchmn/expo-material3-theme';

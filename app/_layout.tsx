@@ -1,5 +1,5 @@
 import { Slot, useRouter, useSegments } from 'expo-router';
-import { useEffect } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { View, ActivityIndicator, Platform } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -7,9 +7,11 @@ import { StatusBar } from 'expo-status-bar';
 import { ThemeProvider, DarkTheme, DefaultTheme } from '@react-navigation/native';
 import { Provider as PaperProvider } from 'react-native-paper';
 import { useMaterial3Theme } from '@pchmn/expo-material3-theme';
+import * as LocalAuthentication from 'expo-local-authentication';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { AuthProvider, useAuth } from '@/contexts/auth-context';
-import { SecurityProvider } from '@/contexts/security-context';
+import { SecurityProvider, useSecurity } from '@/contexts/security-context';
 import { FeatureFlagProvider, useFeatureFlags } from '@/contexts/feature-flag-context';
 import { ThemeProvider as CustomThemeProvider, useTheme } from '@/contexts/theme-context';
 import { CallProvider } from '@/contexts/call-context';
@@ -23,7 +25,61 @@ function AuthProtection() {
   const segments = useSegments();
   const router = useRouter();
   const { theme } = useTheme();
+  const { isBlocked } = useSecurity();
+  const [biometricLocked, setBiometricLocked] = useState(false);
+  const [biometricCheckDone, setBiometricCheckDone] = useState(false);
   useDeepLinkHandler();
+
+  const checkBiometric = useCallback(async () => {
+    if (loading || isBlocked) return;
+
+    try {
+      const biometricEnabled = await AsyncStorage.getItem('biometric_enabled');
+      if (biometricEnabled === 'true') {
+        const compatible = await LocalAuthentication.hasHardwareAsync();
+        if (compatible) {
+          const enrolled = await LocalAuthentication.isEnrolledAsync();
+          if (enrolled) {
+            setBiometricLocked(true);
+          }
+        }
+      }
+    } catch (e) {
+      console.log('Biometric check error:', e);
+    }
+    setBiometricCheckDone(true);
+  }, [loading, isBlocked]);
+
+  useEffect(() => {
+    if (!loading && session) {
+      checkBiometric();
+    } else if (!loading && !session) {
+      setBiometricCheckDone(true);
+    }
+  }, [loading, session, checkBiometric]);
+
+  const authenticateBiometric = async () => {
+    if (!biometricLocked) return true;
+
+    try {
+      const result = await LocalAuthentication.authenticateAsync({
+        promptMessage: 'Authenticate to access app',
+      });
+      if (result.success) {
+        setBiometricLocked(false);
+        return true;
+      }
+    } catch (e) {
+      console.log('Biometric auth error:', e);
+    }
+    return false;
+  };
+
+  useEffect(() => {
+    if (biometricLocked && biometricCheckDone && !isBlocked) {
+      authenticateBiometric();
+    }
+  }, [biometricLocked, biometricCheckDone, isBlocked]);
 
   useEffect(() => {
     if (loading) return;
@@ -35,6 +91,9 @@ function AuthProtection() {
         router.replace('/(auth)/login');
       }
     } else {
+      if (biometricLocked && !isBlocked) {
+        return;
+      }
       if (profile && !profile.username) {
         const inProfileSetup = segments[0] === 'profile-setup';
         if (!inProfileSetup) {
@@ -44,9 +103,9 @@ function AuthProtection() {
         router.replace('/(tabs)/chats');
       }
     }
-  }, [session, loading, segments, profile]);
+  }, [session, loading, segments, profile, biometricLocked, isBlocked]);
 
-  if (loading) {
+  if (loading || (biometricLocked && !isBlocked)) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: theme.background }}>
         <ActivityIndicator size="large" color={theme.tint} />

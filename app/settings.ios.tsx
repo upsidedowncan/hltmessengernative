@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View, Alert } from 'react-native';
+import * as LocalAuthentication from 'expo-local-authentication';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import { useTheme, ThemeMode } from '@/contexts/theme-context';
 import { Button } from '@/components/button';
@@ -19,8 +21,42 @@ export default function SettingsScreen() {
   const [username, setUsername] = useState('');
   const [fullName, setFullName] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [biometricEnabled, setBiometricEnabled] = useState(false);
+  const [biometricAvailable, setBiometricAvailable] = useState(false);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const firstLoad = useRef(true);
+
+  useEffect(() => {
+    const checkBiometric = async () => {
+      const compatible = await LocalAuthentication.hasHardwareAsync();
+      setBiometricAvailable(compatible);
+      if (compatible) {
+        const result = await LocalAuthentication.isEnrolledAsync();
+        if (result) {
+          const saved = await AsyncStorage.getItem('biometric_enabled');
+          setBiometricEnabled(saved === 'true');
+        }
+      }
+    };
+    checkBiometric();
+  }, []);
+
+  const toggleBiometric = async () => {
+    if (!biometricAvailable) {
+      Alert.alert('Not Available', 'Biometric authentication is not available on this device.');
+      return;
+    }
+
+    const result = await LocalAuthentication.authenticateAsync({
+      promptMessage: 'Authenticate to enable biometric login',
+    });
+
+    if (result.success) {
+      const newValue = !biometricEnabled;
+      setBiometricEnabled(newValue);
+      await AsyncStorage.setItem('biometric_enabled', newValue.toString());
+    }
+  };
 
   useEffect(() => {
     if (profile) {
@@ -138,10 +174,27 @@ export default function SettingsScreen() {
           <Text style={[styles.sectionTitle, { color: theme.text }]}>Security</Text>
           <View style={styles.groupContainer}>
             <Tile
+              title="Face ID / Touch ID"
+              icon="finger-print-outline"
+              onPress={toggleBiometric}
+              groupPosition="top"
+              rightElement={
+                <Host>
+                  <Switch
+                    value={biometricEnabled && biometricAvailable}
+                    onValueChange={toggleBiometric}
+                    color={theme.tint}
+                    variant="switch"
+                  />
+                </Host>
+              }
+              chevron={false}
+            />
+            <Tile
               title="Location Security"
               icon="location-outline"
               onPress={() => {}}
-              groupPosition="top"
+              groupPosition="middle"
             />
             <Tile
               title="Trusted Devices"

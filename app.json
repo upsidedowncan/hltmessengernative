@@ -41,7 +41,8 @@
       "supportsTablet": true,
       "infoPlist": {
         "NSMicrophoneUsageDescription": "Allow $(PRODUCT_NAME) to access your microphone.",
-        "NSCameraUsageDescription": "Allow $(PRODUCT_NAME) to access your camera for video calls."
+        "NSCameraUsageDescription": "Allow $(PRODUCT_NAME) to access your camera for video calls.",
+        "NSFaceIDUsageDescription": "Allow $(PRODUCT_NAME) to use Face ID for authentication."
       }
     },
     "android": {
@@ -57,7 +58,8 @@
       "permissions": [
         "RECORD_AUDIO",
         "MODIFY_AUDIO_SETTINGS",
-        "CAMERA"
+        "CAMERA",
+        "USE_BIOMETRIC"
       ]
     },
     "extra": {

@@ -15,6 +15,8 @@ import { supabase } from '@/services/supabase';
 import { useMaterial3Theme } from '@pchmn/expo-material3-theme';
 import { useTheme } from '@/contexts/theme-context';
 import { SettingsTile } from '@/components/settings-tile';
+import { Appbar, Avatar, Surface, TextInput as PaperInput } from 'react-native-paper';
+import { Button } from '@expo/ui/jetpack-compose';
 
 export default function ProfileScreen() {
   const { user, profile, refreshProfile } = useAuth();

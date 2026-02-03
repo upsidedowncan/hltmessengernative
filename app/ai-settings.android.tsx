@@ -7,6 +7,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AIService, AISettings, DEFAULT_AI_SETTINGS } from '@/services/ai-service';
 import { useTheme } from '@/contexts/theme-context';
 import { SettingsTile } from '@/components/settings-tile';
+import { Appbar, Text, TextInput, SegmentedButtons, ActivityIndicator, IconButton, TouchableRipple, Surface } from 'react-native-paper';
+import { Slider } from '@expo/ui/jetpack-compose';
+import { router } from 'expo-router';
 
 export default function AISettingsScreen() {
   const navigation = useNavigation();

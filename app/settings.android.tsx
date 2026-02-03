@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { StyleSheet, View, FlatList, Animated } from 'react-native';
+import { StyleSheet, View, FlatList, Animated, Alert } from 'react-native';
+import * as LocalAuthentication from 'expo-local-authentication';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import { useMaterial3Theme } from '@pchmn/expo-material3-theme';
 import { useThemeMode, useTheme } from '@/contexts/theme-context';
@@ -92,11 +94,45 @@ export default function SettingsScreen() {
   const [notifications, setNotifications] = useState(false);
   const [darkMode, setDarkMode] = useState(mode === 'dark');
   const [systemTheme, setSystemTheme] = useState(mode === 'system');
+  const [biometricEnabled, setBiometricEnabled] = useState(false);
+  const [biometricAvailable, setBiometricAvailable] = useState(false);
 
   useEffect(() => {
     setDarkMode(mode === 'dark');
     setSystemTheme(mode === 'system');
   }, [mode]);
+
+  useEffect(() => {
+    const checkBiometric = async () => {
+      const compatible = await LocalAuthentication.hasHardwareAsync();
+      setBiometricAvailable(compatible);
+      if (compatible) {
+        const result = await LocalAuthentication.isEnrolledAsync();
+        if (result) {
+          const saved = await AsyncStorage.getItem('biometric_enabled');
+          setBiometricEnabled(saved === 'true');
+        }
+      }
+    };
+    checkBiometric();
+  }, []);
+
+  const toggleBiometric = async () => {
+    if (!biometricAvailable) {
+      Alert.alert('Not Available', 'Biometric authentication is not available on this device.');
+      return;
+    }
+
+    const result = await LocalAuthentication.authenticateAsync({
+      promptMessage: 'Authenticate to enable biometric login',
+    });
+
+    if (result.success) {
+      const newValue = !biometricEnabled;
+      setBiometricEnabled(newValue);
+      await AsyncStorage.setItem('biometric_enabled', newValue.toString());
+    }
+  };
 
   useEffect(() => {
     if (profile) {
@@ -160,6 +196,14 @@ export default function SettingsScreen() {
     {
       title: 'Security',
       items: [
+        {
+          id: 'biometric',
+          title: 'Fingerprint / Face',
+          icon: 'fingerprint',
+          onPress: toggleBiometric,
+          rightElement: 'switch',
+          switchValue: biometricEnabled && biometricAvailable,
+        },
         {
           id: 'location',
           title: 'Location Security',
@@ -265,6 +309,8 @@ export default function SettingsScreen() {
                       setLocationTracking(newValue);
                     } else if (item.id === 'notifications') {
                       setNotifications(newValue);
+                    } else if (item.id === 'biometric') {
+                      toggleBiometric();
                     }
                   } else if (item.onPress) {
                     item.onPress();

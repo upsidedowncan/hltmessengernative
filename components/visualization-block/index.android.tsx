@@ -4,7 +4,7 @@ import { useRouter } from 'expo-router';
 import { useMaterial3Theme } from '@pchmn/expo-material3-theme';
 import { Button, Surface } from 'react-native-paper';
 import { WebView } from 'react-native-webview';
-import { useTheme } from '@/context/ThemeContext';
+import { useTheme } from '@/contexts/theme-context';
 
 interface VisualizationBlockProps {
   htmlContent: string;

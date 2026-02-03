@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'rea
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { supabase } from '@/services/supabase';
-import { useTheme } from '@/context/ThemeContext';
+import { useTheme } from '@/contexts/theme-context';
 
 type DeepLinkUserWidgetProps = {
     username: string;

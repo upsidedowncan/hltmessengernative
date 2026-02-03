@@ -4,7 +4,7 @@ import Markdown from 'react-native-markdown-display';
 import { useMaterial3Theme } from '@pchmn/expo-material3-theme';
 import { Text as RNPText, Surface } from 'react-native-paper';
 import { Ionicons } from '@expo/vector-icons';
-import { useTheme } from '@/context/ThemeContext';
+import { useTheme } from '@/contexts/theme-context';
 import { ChatBubbleProps } from './chat-bubble.types';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');

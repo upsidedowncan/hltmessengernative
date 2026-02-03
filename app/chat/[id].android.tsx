@@ -43,7 +43,7 @@ import { Appbar, IconButton, Text as RNPText, Card, Divider, TouchableRipple, Ac
 import { supabase } from '@/services/supabase';
 import { useAuth } from '@/contexts/auth-context';
 import { useTheme } from '@/contexts/theme-context';
-import { useSendNotification } from '@/hooks/useSendNotification';
+import { useSendNotification } from '@/hooks/use-send-notification';
 import { DeepLinkUserWidget } from '@/components/deep-link-user-widget.android';
 import { Colors } from '@/constants/colors';
 

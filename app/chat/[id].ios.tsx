@@ -24,7 +24,7 @@ import { useTheme } from '@/contexts/theme-context';
 import { useAuth } from '@/contexts/auth-context';
 import { supabase } from '@/services/supabase';
 import { AppBar } from '@/components/app-bar';
-import { useSendNotification } from '@/hooks/useSendNotification';
+import { useSendNotification } from '@/hooks/use-send-notification';
 import { LiquidGlassView, LiquidGlassContainerView, isLiquidGlassSupported } from '@callstack/liquid-glass';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');

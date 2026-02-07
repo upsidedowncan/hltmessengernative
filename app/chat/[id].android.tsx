@@ -505,7 +505,7 @@ export default function SingleChatScreen() {
               }
               closeMenu();
             }
-          }
+            }
           >
             <RNPText style={styles.reactionMenuEmoji}>{emoji}</RNPText>
           </Pressable>

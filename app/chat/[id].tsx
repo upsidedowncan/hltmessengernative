@@ -57,7 +57,9 @@ import { DeepLinkUserWidget } from '@/components/deep-link-user-widget';
 import { Colors } from '@/constants/colors';
 import { useSendNotification } from '@/hooks/use-send-notification';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
+import ChatBubble from '@/components/chat/ChatBubble';
+import ChatInput from '@/components/chat/ChatInput';
+import { Message, Attachment } from '@/components/chat/types';
 
 // Enable LayoutAnimation on Android
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -406,15 +408,21 @@ export default function SingleChatScreen() {
   };
 
   // NEW: Unified send function
-  const handleSend = async () => {
-    if ((!inputText.trim() && attachments.length === 0) || !user) return;
+  const handleSend = async (text: string) => {
+    // If text is provided, use it. Otherwise fall back to state (though state should be cleared by parent)
+    // But with new flow, parent state 'inputText' is just for sync, the triggered action comes with 'text'.
+    // If the component calls handleSend(text), we use that text. 
+    
+    // We should allow empty text if there are attachments
+    const contentToSend = text || '';
+    if ((!contentToSend.trim() && attachments.length === 0) || !user) return;
     setSending(true);
 
     const optimisticMsg: Message = {
       id: `opt_${Date.now()}_${Math.random()}`,
       sender_id: user.id,
       receiver_id: friendId,
-      content: inputText,
+      content: contentToSend,
       attachments: attachments,
       created_at: new Date().toISOString(),
       read_at: null,
@@ -424,6 +432,7 @@ export default function SingleChatScreen() {
 
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setMessages(prev => [optimisticMsg, ...prev]);
+    // Clear parent state to sync back to empty
     setInputText('');
     setAttachments([]);
 
@@ -431,7 +440,7 @@ export default function SingleChatScreen() {
       const { error } = await supabase.rpc('rpc_send_message', {
         p_sender_id: user.id,
         p_receiver_id: friendId,
-        p_content: inputText,
+        p_content: contentToSend,
         p_attachments: attachments,
       });
       if (error) throw error;
@@ -713,81 +722,7 @@ export default function SingleChatScreen() {
     }
   };
 
-  // Attachment renderer
-  const renderAttachment = (att: Attachment, isMe: boolean) => {
-    const isImage = att.type === 'image';
-    const isAudio = att.type === 'audio';
-    const isPlaying = playingAudioId === `${att.url}`;
 
-    const isNearMe = isMe;
-
-    return (
-      <TouchableOpacity
-        key={att.url}
-        onPress={() => {
-          if (isImage) {
-            setViewerImages([{ uri: att.url }]);
-            setViewerIndex(0);
-            setViewerVisible(true);
-          } else if (isAudio) {
-            playAudio(att.url, `${att.url}`);
-          } else {
-            // Show options for files
-            Alert.alert(
-              'File Options',
-              att.name || 'File',
-              [
-                { text: 'Download', onPress: () => downloadFile(att.url, att.name || 'file') },
-                { text: 'Copy Link', onPress: () => copyFile(att.url) },
-                { text: 'Cancel', style: 'cancel' }
-              ]
-            );
-          }
-        }}
-        style={styles.attachmentItem}
-      >
-        {isImage ? (
-          <Image
-            source={{ uri: att.url }}
-            style={[styles.imageAttachment, { borderColor: isMe ? theme.tint : theme.border }]}
-            contentFit="cover"
-          />
-        ) : isAudio ? (
-          <View style={[styles.fileAttachment, { 
-            backgroundColor: isNearMe ? theme.tint : theme.cardBackground,
-          }]}>
-            <MaterialCommunityIcons 
-              name={isPlaying ? "pause" : "play"} 
-              size={24} 
-              color={isNearMe ? "#fff" : theme.tint} 
-            />
-            <Text style={[styles.fileText, { color: isNearMe ? "#fff" : theme.text }]} numberOfLines={1}>
-              {att.name || 'Audio'}
-            </Text>
-            {att.duration ? (
-              <Text style={[styles.durationText, { color: isNearMe ? "rgba(255,255,255,0.7)" : theme.tabIconDefault }]}>
-                {Math.round(att.duration / 1000)}s
-              </Text>
-            ) : null}
-          </View>
-        ) : (
-          <View style={[styles.fileAttachment, { 
-            backgroundColor: isMe ? theme.tint : theme.cardBackground,
-          }]}>
-            <MaterialCommunityIcons name="file-document" size={24} color={isMe ? "#fff" : theme.tint} />
-            <Text style={[styles.fileText, { color: isMe ? "#fff" : theme.text }]} numberOfLines={1}>
-              {att.name || 'File'}
-            </Text>
-            {att.size ? (
-              <Text style={[styles.sizeText, { color: isMe ? "rgba(255,255,255,0.7)" : theme.tabIconDefault }]}>
-                {(att.size / 1024 / 1024).toFixed(2)} MB
-              </Text>
-            ) : null}
-          </View>
-        )}
-      </TouchableOpacity>
-    );
-  };
 
   // Attachment picker modal
   const AttachmentPicker = () => {
@@ -907,110 +842,7 @@ export default function SingleChatScreen() {
     );
   };
 
-  // Message item component
-  const MessageItem = ({ 
-    item, 
-    index, 
-    isSelected, 
-    isMenuClosing,
-    onLongPress 
-  }: { 
-    item: Message; 
-    index: number; 
-    isSelected: boolean;
-    isMenuClosing: boolean;
-    onLongPress: (m: Message, x: number, y: number) => void;
-  }) => {
-    const isMe = item.sender_id === user?.id;
-    const newerMessage = messages[index - 1];
-    const isSameSender = newerMessage && newerMessage.sender_id === item.sender_id;
-    const TIME_THRESHOLD = 60 * 1000;
-    const isWithinTime = newerMessage && (new Date(newerMessage.created_at).getTime() - new Date(item.created_at).getTime() < TIME_THRESHOLD);
-    const isLastInGroup = !isSameSender || !isWithinTime;
-    const reactionEntries = Object.entries(item.reactions || {}).filter(([, users]) => Array.isArray(users) && users.length > 0);
 
-    const handleLongPress = (event: any) => {
-      const { nativeEvent } = event;
-      onLongPress(item, nativeEvent.pageX, nativeEvent.pageY);
-    };
-
-    return (
-      <View style={{ marginBottom: isLastInGroup ? 12 : 2 }}>
-        <TouchableOpacity
-          onLongPress={handleLongPress}
-          activeOpacity={0.9}
-        >
-          <View
-            style={[
-              styles.messageRow,
-              {
-                justifyContent: isMe ? 'flex-end' : 'flex-start',
-                opacity: isMenuClosing ? 0.3 : 1,
-              },
-            ]}
-          >
-            <View
-              style={[
-                styles.bubble,
-                {
-                  backgroundColor: isMe ? theme.tint : theme.cardBackground,
-                  borderTopLeftRadius: !isMe && !isLastInGroup ? 4 : 16,
-                  borderTopRightRadius: isMe && !isLastInGroup ? 4 : 16,
-                  borderBottomLeftRadius: !isMe ? 4 : 16,
-                  borderBottomRightRadius: isMe ? 4 : 16,
-                },
-              ]}
-            >
-              {item.attachments?.map(att => renderAttachment(att, isMe))}
-              {!!item.content && (
-                <Text style={[styles.messageText, { color: isMe ? '#fff' : theme.text }]}>
-                  {item.content}
-                </Text>
-              )}
-              {item.is_edited && (
-                <Text style={[styles.editedText, { color: isMe ? 'rgba(255,255,255,0.6)' : theme.tabIconDefault }]}>
-                  edited
-                </Text>
-              )}
-            </View>
-          </View>
-        </TouchableOpacity>
-
-        {reactionEntries.length > 0 && (
-          <View style={[styles.reactionRow, { justifyContent: isMe ? 'flex-end' : 'flex-start' }]}> 
-            {reactionEntries.map(([emoji, users]) => (
-              <View
-                key={`${item.id}-${emoji}`}
-                style={[
-                  styles.reactionChip,
-                  { backgroundColor: isMe ? 'rgba(255,255,255,0.2)' : theme.cardBackground }
-                ]}
-              >
-                <Text style={[styles.reactionEmoji, { color: isMe ? '#fff' : theme.text }]}>{emoji}</Text>
-                <Text style={[styles.reactionCount, { color: isMe ? '#fff' : theme.text }]}>{users.length}</Text>
-              </View>
-            ))}
-          </View>
-        )}
-
-        {isLastInGroup && (
-          <View style={[styles.metadataContainer, { justifyContent: isMe ? 'flex-end' : 'flex-start' }]}>
-            <Text style={[styles.timeText, { color: theme.tabIconDefault }]}>
-              {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-            </Text>
-            {isMe && (
-              <MaterialCommunityIcons
-                name={item.read_at ? "check-all" : "check"}
-                size={14}
-                color={item.read_at ? theme.tint : theme.tabIconDefault}
-                style={{ marginLeft: 4 }}
-              />
-            )}
-          </View>
-        )}
-      </View>
-    );
-  };
 
   const renderHeaderTitle = () => (
     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -1126,18 +958,41 @@ export default function SingleChatScreen() {
           ref={flatListRef}
           data={messages}
           keyExtractor={item => getStableKey(item) + '_' + item.id}
-          renderItem={({ item, index }) => (
-            <MessageItem 
-              item={item} 
-              index={index} 
-              isSelected={selectedMessage?.id === item.id}
-              isMenuClosing={isMenuClosing && selectedMessage?.id === item.id}
-              onLongPress={(m, x, y) => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                openMenu(m, x, y);
-              }}
-            />
-          )}
+          renderItem={({ item, index }) => {
+            const isMe = item.sender_id === user?.id;
+            const newerMessage = messages[index - 1];
+            const isSameSender = newerMessage && newerMessage.sender_id === item.sender_id;
+            const TIME_THRESHOLD = 60 * 1000;
+            const isWithinTime = newerMessage && (new Date(newerMessage.created_at).getTime() - new Date(item.created_at).getTime() < TIME_THRESHOLD);
+            const isLastInGroup = !isSameSender || !isWithinTime;
+
+            return (
+              <ChatBubble
+                message={item}
+                isMe={isMe}
+                isLastInGroup={isLastInGroup}
+                onLongPress={(m, x, y) => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                  openMenu(m, x, y);
+                }}
+                onAttachmentPress={(att) => {
+                    if (att.type === 'image') {
+                        setViewerImages([{ uri: att.url }]);
+                        setViewerIndex(0);
+                        setViewerVisible(true);
+                    } else if (att.type === 'audio') {
+                        playAudio(att.url, att.url);
+                    } else {
+                        Alert.alert('File', att.name || 'File', [
+                            { text: 'Download', onPress: () => downloadFile(att.url, att.name || 'file') },
+                            { text: 'Copy Link', onPress: () => copyFile(att.url) },
+                            { text: 'Cancel', style: 'cancel' }
+                        ]);
+                    }
+                }}
+              />
+            );
+          }}
           inverted
           contentContainerStyle={styles.listContent}
           removeClippedSubviews={true}
@@ -1157,54 +1012,17 @@ export default function SingleChatScreen() {
         />
 
         <AttachmentPicker />
-
-        <View style={[styles.inputWrapper, { backgroundColor: theme.background, paddingBottom: Math.max(insets.bottom, 12) }]}>
-          <View style={styles.inputContainer}>
-            <TouchableOpacity
-              style={[styles.attachButton, { backgroundColor: theme.cardBackground }]}
-              onPress={() => setIsAttachmentOpen(!isAttachmentOpen)}
-            >
-              <MaterialCommunityIcons name="plus" size={24} color={theme.tint} />
-            </TouchableOpacity>
-
-            <View style={[styles.textInputContainer, { backgroundColor: theme.cardBackground }]}>
-              <TextInput
-                style={[styles.textInput, { color: theme.text }]}
-                placeholder="Message"
-                placeholderTextColor={theme.tabIconDefault}
-                value={inputText}
-                onChangeText={setInputText}
-                multiline
-              />
-            </View>
-
-            {inputText.trim().length > 0 ? (
-              <TouchableOpacity
-                style={[styles.sendButton, { backgroundColor: theme.tint }]}
-                onPress={handleSend}
-                disabled={sending}
-              >
-                {sending ? (
-                  <ActivityIndicator size="small" color="#fff" />
-                ) : (
-                  <MaterialCommunityIcons name="send" size={20} color="#fff" />
-                )}
-              </TouchableOpacity>
-            ) : (
-              <TouchableOpacity
-                style={[styles.sendButton, { backgroundColor: isRecording ? '#FF3B30' : theme.tint }]}
-                onPressIn={startRecording}
-                onPressOut={stopAndSendRecording}
-              >
-                <MaterialCommunityIcons 
-                  name={isRecording ? "microphone" : "microphone"} 
-                  size={20} 
-                  color="#fff" 
-                />
-              </TouchableOpacity>
-            )}
-          </View>
-        </View>
+        
+        <ChatInput
+            value={inputText}
+            onChangeText={setInputText}
+            onSend={handleSend}
+            onAttach={() => setIsAttachmentOpen(!isAttachmentOpen)}
+            isRecording={isRecording}
+            onRecordPressIn={startRecording}
+            onRecordPressOut={stopAndSendRecording}
+            isLoading={sending}
+        />
       </KeyboardAvoidingView>
 
       <MessageMenu />
@@ -1227,95 +1045,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 10,
   },
-  messageRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-  },
-  bubble: {
-    maxWidth: '75%',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    overflow: 'hidden',
-  },
-  messageText: {
-    fontSize: 15,
-    lineHeight: 20,
-  },
-  editedText: {
-    fontSize: 11,
-    marginTop: 2,
-    alignSelf: 'flex-end',
-  },
-  metadataContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 2,
-  },
-  timeText: {
-    fontSize: 11,
-  },
-  attachmentItem: {
-    marginBottom: 4,
-  },
-  imageAttachment: {
-    width: 200,
-    height: 200,
-    borderRadius: 12,
-    borderWidth: 1,
-  },
-  fileAttachment: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 8,
-    borderRadius: 8,
-    gap: 8,
-  },
-  fileText: {
-    flex: 1,
-    fontSize: 14,
-  },
-  sizeText: {
-    fontSize: 12,
-    marginLeft: 4,
-  },
-  durationText: {
-    fontSize: 12,
-    marginLeft: 4,
-  },
-  inputWrapper: {
-    paddingHorizontal: 12,
-    paddingTop: 8,
-  },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  attachButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  textInputContainer: {
-    flex: 1,
-    borderRadius: 20,
-    paddingHorizontal: 12,
-    maxHeight: 100,
-  },
-  textInput: {
-    fontSize: 16,
-    paddingVertical: 8,
-    maxHeight: 100,
-  },
-  sendButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+
   modalOverlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0,0,0,0.5)',

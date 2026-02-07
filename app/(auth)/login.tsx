@@ -15,6 +15,7 @@ import { useRouter } from 'expo-router';
 import { supabase } from '@/services/supabase';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/contexts/theme-context';
+import { t } from '@/services/i18n';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -26,7 +27,7 @@ export default function LoginScreen() {
 
   const handleLogin = async () => {
     if (!email || !password) {
-      Alert.alert('Error', 'Please enter both email and password.');
+      Alert.alert(t('common.error'), t('auth.login.errors.missingFields'));
       return;
     }
 
@@ -39,19 +40,22 @@ export default function LoginScreen() {
       });
 
       if (error) {
-        Alert.alert('Login Failed', error.message);
+        Alert.alert(t('auth.login.errors.loginFailedTitle'), error.message);
       } else {
         router.replace('/security-verification?justLoggedIn=true');
       }
     } catch (error: any) {
-      Alert.alert('Login Error', error.message || 'An unexpected error occurred.');
+      Alert.alert(
+        t('auth.login.errors.loginErrorTitle'),
+        error.message || t('auth.login.errors.loginErrorFallback')
+      );
     } finally {
       setLoading(false);
     }
   };
 
   const handleGoogleLogin = async () => {
-    Alert.alert('Google Login', 'Configure Google Cloud Console & Supabase first.');
+    Alert.alert(t('auth.login.errors.googleTitle'), t('auth.login.errors.googleMessage'));
   };
 
   return (
@@ -62,35 +66,35 @@ export default function LoginScreen() {
       <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
         <View style={styles.contentContainer}>
           <View style={styles.headerContainer}>
-            <Text style={[styles.title, { color: theme.text }]}>Welcome Back</Text>
+            <Text style={[styles.title, { color: theme.text }]}>{t('auth.login.title')}</Text>
             <Text style={[styles.subtitle, { color: theme.text }]}>
-              Log in to HLT Messenger to connect with your friends.
+              {t('auth.login.subtitle')}
             </Text>
           </View>
 
           <View style={[styles.card, { backgroundColor: theme.cardBackground, borderColor: theme.border }]}>
             <View style={styles.formContainer}>
               <View>
-                <Text style={[styles.label, { color: theme.text }]}>Email</Text>
+                <Text style={[styles.label, { color: theme.text }]}>{t('auth.login.emailLabel')}</Text>
                 <TextInput
                   style={[styles.input, { color: theme.text, borderColor: theme.border, backgroundColor: theme.background }]}
                   value={email}
                   onChangeText={setEmail}
                   autoCapitalize="none"
                   keyboardType="email-address"
-                  placeholder="name@example.com"
+                  placeholder={t('auth.login.emailPlaceholder')}
                   placeholderTextColor={theme.tabIconDefault}
                 />
               </View>
 
               <View>
-                <Text style={[styles.label, { color: theme.text }]}>Password</Text>
+                <Text style={[styles.label, { color: theme.text }]}>{t('auth.login.passwordLabel')}</Text>
                 <TextInput
                   style={[styles.input, { color: theme.text, borderColor: theme.border, backgroundColor: theme.background }]}
                   secureTextEntry
                   value={password}
                   onChangeText={setPassword}
-                  placeholder="Enter your password"
+                  placeholder={t('auth.login.passwordPlaceholder')}
                   placeholderTextColor={theme.tabIconDefault}
                 />
               </View>
@@ -103,7 +107,7 @@ export default function LoginScreen() {
                 {loading ? (
                   <ActivityIndicator color="#fff" />
                 ) : (
-                  <Text style={styles.buttonText}>Log In</Text>
+                  <Text style={styles.buttonText}>{t('auth.login.button')}</Text>
                 )}
               </TouchableOpacity>
 
@@ -111,14 +115,14 @@ export default function LoginScreen() {
                 style={styles.centerContainer}
                 onPress={() => router.push('/(auth)/forgot-password')}
               >
-                <Text style={{ color: theme.tint }}>Forgot Password?</Text>
+                <Text style={{ color: theme.tint }}>{t('auth.login.forgotPassword')}</Text>
               </TouchableOpacity>
             </View>
           </View>
 
           <View style={styles.separatorContainer}>
             <View style={[styles.separator, { backgroundColor: theme.border }]} />
-            <Text style={{ opacity: 0.5, marginHorizontal: 10, color: theme.text }}>OR</Text>
+            <Text style={{ opacity: 0.5, marginHorizontal: 10, color: theme.text }}>{t('auth.login.or')}</Text>
             <View style={[styles.separator, { backgroundColor: theme.border }]} />
           </View>
 
@@ -127,13 +131,13 @@ export default function LoginScreen() {
             onPress={handleGoogleLogin}
           >
             <Ionicons name="logo-google" size={20} color={theme.text} style={{ marginRight: 10 }} />
-            <Text style={{ color: theme.text, fontWeight: '600' }}>Continue with Google</Text>
+            <Text style={{ color: theme.text, fontWeight: '600' }}>{t('auth.login.google')}</Text>
           </TouchableOpacity>
 
           <View style={styles.footerContainer}>
-            <Text style={{ opacity: 0.7, color: theme.text }}>Don't have an account?</Text>
+            <Text style={{ opacity: 0.7, color: theme.text }}>{t('auth.login.footer')}</Text>
             <TouchableOpacity onPress={() => router.push('/(auth)/signup')}>
-              <Text style={{ color: theme.tint, fontWeight: 'bold' }}>Sign Up</Text>
+              <Text style={{ color: theme.tint, fontWeight: 'bold' }}>{t('auth.login.footerAction')}</Text>
             </TouchableOpacity>
           </View>
         </View>

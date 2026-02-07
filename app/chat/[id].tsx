@@ -19,6 +19,7 @@ import {
   Dimensions,
   DeviceEventEmitter,
   Keyboard,
+  Pressable,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -32,6 +33,7 @@ import * as Sharing from 'expo-sharing';
 import * as MediaLibrary from 'expo-media-library';
 import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
+import * as LocalAuthentication from 'expo-local-authentication';
 import ImageView from 'react-native-image-viewing';
 import InCallManager from 'react-native-incall-manager';
 import Animated, { 
@@ -42,7 +44,7 @@ import Animated, {
   interpolate,
   runOnJS,
 } from 'react-native-reanimated';
-import { Ionicons } from '@expo/vector-icons';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 
 import { supabase } from '@/services/supabase';
 import { useAuth } from '@/contexts/auth-context';
@@ -53,6 +55,7 @@ import { callService } from '@/services/call-service';
 import { AppBar } from '@/components/app-bar';
 import { DeepLinkUserWidget } from '@/components/deep-link-user-widget';
 import { Colors } from '@/constants/colors';
+import { useSendNotification } from '@/hooks/use-send-notification';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -71,6 +74,8 @@ type Attachment = {
   duration?: number; // Add duration for audio
 };
 
+type Reactions = Record<string, string[]>;
+
 type Message = {
   id: string;
   content: string;
@@ -80,7 +85,10 @@ type Message = {
   read_at: string | null;
   attachments: Attachment[];
   is_edited: boolean;
+  reactions?: Reactions | null;
 };
+
+const REACTION_EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '👏'];
 
 export default function SingleChatScreen() {
   const router = useRouter();
@@ -88,12 +96,13 @@ export default function SingleChatScreen() {
   const friendId = params.friendId as string;
   const friendName = params.friendName as string;
   const friendAvatar = params.friendAvatar as string | undefined;
+  const isLockedParam = params.isLocked as string;
 
   const { user, profile } = useAuth();
   const { theme, isDarkMode } = useTheme();
-  const { sendNotification } = useSendNotification();
   const { isEnabled } = useFeatureFlags();
   const { setIsCallInProgress } = useCall() as any;
+  const { sendNotification } = useSendNotification();
   const insets = useSafeAreaInsets();
   
   const [messages, setMessages] = useState<Message[]>([]);
@@ -101,7 +110,10 @@ export default function SingleChatScreen() {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'disconnected'>('connecting');
-  
+  const [isChatLocked, setIsChatLocked] = useState(isLockedParam === 'true');
+  const [biometricAvailable, setBiometricAvailable] = useState(false);
+  const [showLockOverlay, setShowLockOverlay] = useState(false);
+
   const flatListRef = useRef<FlatList>(null);
   const CACHE_KEY = `chat_${user?.id}_${friendId}`;
   const subscriptionRef = useRef<any>(null);
@@ -117,21 +129,22 @@ export default function SingleChatScreen() {
   const [isRecording, setIsRecording] = useState(false);
   const [playingAudioId, setPlayingAudioId] = useState<string | null>(null);
   const [sound, setSound] = useState<Audio.Sound | null>(null);
-  const [playbackStatus, setPlaybackStatus] = useState<{ position: number; duration: number } | null>(null);
 
   const [viewerVisible, setViewerVisible] = useState(false);
   const [viewerImages, setViewerImages] = useState<{ uri: string }[]>([]);
   const [viewerIndex, setViewerIndex] = useState(0);
-  const [imageActionLoading, setImageActionLoading] = useState(false);
   const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
   const [isMenuClosing, setIsMenuClosing] = useState(false);
   const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
   const [menuOnLeft, setMenuOnLeft] = useState(true);
-  const [isNear, setIsNear] = useState(false);
 
   const menuAnimation = useSharedValue(0);
   const menuScale = useSharedValue(0);
   const menuOpacity = useSharedValue(0);
+
+  const [isNear, setIsNear] = useState(false);
+
+  const [isAudioMode, setIsAudioMode] = useState(false);
 
   const closeMenu = () => {
     menuAnimation.value = withTiming(0, { duration: 200 });
@@ -144,15 +157,13 @@ export default function SingleChatScreen() {
 
   const openMenu = (message: Message, x: number, y: number) => {
     const screenWidth = Dimensions.get('window').width;
-    const menuWidth = Platform.OS === 'ios' ? 250 : 220;
-    const menuHeight = 100;
+    const menuWidth = 250;
     
     const isLeft = x < screenWidth / 2;
-    setMenuOnLeft(isLeft);
     
     setMenuPosition({
       x: isLeft ? Math.max(16, x - 16) : Math.min(screenWidth - menuWidth + 16, x - menuWidth + 16),
-      y: Math.min(y - 8, Dimensions.get('window').height - menuHeight - 50)
+      y: Math.min(y - 8, Dimensions.get('window').height - 100 - 50)
     });
     setSelectedMessage(message);
     setIsMenuClosing(false);
@@ -160,6 +171,45 @@ export default function SingleChatScreen() {
     menuScale.value = withSpring(1, { damping: 55, stiffness: 520 });
     menuOpacity.value = withTiming(1, { duration: 150 });
   };
+
+  const unlockChat = async () => {
+    if (!biometricAvailable) {
+      Alert.alert('Not Available', 'Biometric authentication is not available on this device.');
+      return;
+    }
+
+    const result = await LocalAuthentication.authenticateAsync({
+      promptMessage: 'Authenticate to unlock this chat',
+    });
+
+    if (result.success) {
+      setShowLockOverlay(false);
+    }
+  };
+
+  useEffect(() => {
+    const checkBiometricAndLock = async () => {
+      const compatible = await LocalAuthentication.hasHardwareAsync();
+      setBiometricAvailable(compatible);
+      
+      const locked = await AsyncStorage.getItem(`locked_chat_${friendId}`);
+      if (locked === 'true') {
+        setIsChatLocked(true);
+        setShowLockOverlay(true);
+      }
+    };
+    checkBiometricAndLock();
+    
+    loadCachedMessages();
+    fetchMessages(0);
+    subscribeToMessages();
+    markAsRead();
+
+    return () => {
+      if (subscriptionRef.current) supabase.removeChannel(subscriptionRef.current);
+      if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
+    };
+  }, []);
 
   useEffect(() => {
     if (selectedMessage) {
@@ -169,56 +219,19 @@ export default function SingleChatScreen() {
   }, [messages.length]);
 
   useEffect(() => {
-    return () => {
-      if (sound) {
-        sound.unloadAsync();
-      }
-    };
-  }, [sound]);
-
-  useEffect(() => {
     const keyboardDidShowListener = Keyboard.addListener(
       'keyboardDidShow',
       () => {
         if (isAttachmentOpen) {
-           LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-           setIsAttachmentOpen(false);
+          LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+          setIsAttachmentOpen(false);
         }
-        closeMenu();
       }
     );
     return () => {
       keyboardDidShowListener.remove();
     };
   }, [isAttachmentOpen]);
-
-  useEffect(() => {
-    loadCachedMessages();
-    fetchMessages(0);
-    subscribeToMessages();
-    markAsRead();
-
-    const proximityListener = DeviceEventEmitter.addListener('Proximity', (data) => {
-        setIsNear(data.isNear);
-    });
-    
-    return () => {
-      if (subscriptionRef.current) supabase.removeChannel(subscriptionRef.current);
-      if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
-      proximityListener.remove();
-      InCallManager.stop();
-    };
-  }, []);
-
-  useEffect(() => {
-    if (playingAudioId) {
-        if (isNear) {
-            InCallManager.setForceSpeakerphoneOn(false);
-        } else {
-            InCallManager.setForceSpeakerphoneOn(true);
-        }
-    }
-  }, [isNear, playingAudioId]);
 
   const loadCachedMessages = async () => {
     try {
@@ -253,16 +266,16 @@ export default function SingleChatScreen() {
 
     for (const msg of combined) {
       if (seenIds.has(msg.id)) continue;
-      
+
       const isOptimistic = msg.id.startsWith('opt_');
       if (isOptimistic) {
-          const realMatch = combined.find(m => 
-              !m.id.startsWith('opt_') && 
-              m.sender_id === msg.sender_id && 
-              m.content === msg.content &&
-              Math.abs(new Date(m.created_at).getTime() - new Date(msg.created_at).getTime()) < 60000
-          );
-          if (realMatch) continue;
+        const realMatch = combined.find(m =>
+          !m.id.startsWith('opt_') &&
+          m.sender_id === msg.sender_id &&
+          m.content === msg.content &&
+          Math.abs(new Date(m.created_at).getTime() - new Date(msg.created_at).getTime()) < 60000
+        );
+        if (realMatch) continue;
       }
 
       seenIds.add(msg.id);
@@ -286,12 +299,12 @@ export default function SingleChatScreen() {
       if (data.length < PAGE_SIZE) setHasMore(false);
 
       if (data.length > 0) {
-          LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-          setMessages(prev => {
-            const merged = deduplicateMessages(data, prev);
-            if (pageNumber === 0) cacheMessages(merged.slice(0, 50));
-            return merged;
-          });
+        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+        setMessages(prev => {
+          const merged = deduplicateMessages(data, prev);
+          if (pageNumber === 0) cacheMessages(merged.slice(0, 50));
+          return merged;
+        });
       }
     } catch (error) {
       console.error('Fetch error:', error);
@@ -312,27 +325,27 @@ export default function SingleChatScreen() {
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'messages' },
         (payload) => {
-           const newMsg = payload.new as Message;
-           if (newMsg.sender_id === friendId || newMsg.receiver_id === friendId) {
-             LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-             setMessages(prev => {
-                const updated = deduplicateMessages([newMsg], prev);
-                cacheMessages(updated.slice(0, 50));
-                return updated;
-             });
-             if (newMsg.sender_id === friendId) markAsRead();
-           }
+          const newMsg = payload.new as Message;
+          if (newMsg.sender_id === friendId || newMsg.receiver_id === friendId) {
+            LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+            setMessages(prev => {
+              const updated = deduplicateMessages([newMsg], prev);
+              cacheMessages(updated.slice(0, 50));
+              return updated;
+            });
+            if (newMsg.sender_id === friendId) markAsRead();
+          }
         }
       )
-       .on(
+      .on(
         'postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'messages' },
         (payload) => {
-           const updatedMsg = payload.new as Message;
-           if (updatedMsg.sender_id === friendId || updatedMsg.receiver_id === friendId) {
-               LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-               setMessages(prev => prev.map(m => m.id === updatedMsg.id ? updatedMsg : m));
-           }
+          const updatedMsg = payload.new as Message;
+          if (updatedMsg.sender_id === friendId || updatedMsg.receiver_id === friendId) {
+            LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+            setMessages(prev => prev.map(m => m.id === updatedMsg.id ? updatedMsg : m));
+          }
         }
       )
       .subscribe((status) => {
@@ -355,23 +368,62 @@ export default function SingleChatScreen() {
     await supabase.rpc('mark_messages_read', { p_sender_id: friendId });
   };
 
+  const updateMessageReactions = (messageId: string, reactions: Reactions) => {
+    setMessages(prev => prev.map(m => (m.id === messageId ? { ...m, reactions } : m)));
+  };
+
+  const toggleReaction = async (message: Message, emoji: string) => {
+    if (!user || message.id.startsWith('opt_')) return;
+
+    const existing = (message.reactions || {}) as Reactions;
+    const current = new Set(existing[emoji] || []);
+    const hasReacted = current.has(user.id);
+
+    if (hasReacted) {
+      current.delete(user.id);
+    } else {
+      current.add(user.id);
+    }
+
+    const updated: Reactions = { ...existing };
+    if (current.size === 0) {
+      delete updated[emoji];
+    } else {
+      updated[emoji] = Array.from(current);
+    }
+
+    updateMessageReactions(message.id, updated);
+
+    try {
+      const { error } = await supabase
+        .from('messages')
+        .update({ reactions: updated })
+        .eq('id', message.id);
+      if (error) throw error;
+    } catch (error) {
+      updateMessageReactions(message.id, existing);
+    }
+  };
+
+  // NEW: Unified send function
   const handleSend = async () => {
     if ((!inputText.trim() && attachments.length === 0) || !user) return;
     setSending(true);
 
     const optimisticMsg: Message = {
-        id: `opt_${Date.now()}_${Math.random()}`, 
-        sender_id: user.id,
-        receiver_id: friendId,
-        content: inputText,
-        attachments: attachments,
-        created_at: new Date().toISOString(),
-        read_at: null,
-        is_edited: false
+      id: `opt_${Date.now()}_${Math.random()}`,
+      sender_id: user.id,
+      receiver_id: friendId,
+      content: inputText,
+      attachments: attachments,
+      created_at: new Date().toISOString(),
+      read_at: null,
+      is_edited: false,
+      reactions: {}
     };
 
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-    setMessages(prev => [optimisticMsg, ...prev]); 
+    setMessages(prev => [optimisticMsg, ...prev]);
     setInputText('');
     setAttachments([]);
 
@@ -394,96 +446,133 @@ export default function SingleChatScreen() {
       }).catch(err => console.error('Notification failed', err));
 
     } catch (error: any) {
+      console.error("Send failed", error);
       setMessages(prev => prev.filter(m => m.id !== optimisticMsg.id));
     } finally {
       setSending(false);
     }
   };
 
-  const uploadFile = async (uri: string, type: 'image' | 'file' | 'audio', name?: string, size?: number, duration?: number) => {
-      if (size && size > 10 * 1024 * 1024) {
-          Alert.alert('File too large', 'Max 10MB per file.');
-          return;
-      }
-      try {
-          const ext = uri.split('.').pop();
-          const fileName = `${Date.now()}.${ext}`;
-          const filePath = `${user?.id}/${fileName}`;
-          const formData = new FormData();
-          
-          let mimeType = 'application/octet-stream';
-          if (type === 'image') mimeType = 'image/jpeg';
-          else if (type === 'audio') mimeType = 'audio/m4a';
-
-          formData.append('file', { uri, name: fileName, type: mimeType } as any);
-          
-          const { error } = await supabase.storage.from('chat-attachments').upload(filePath, formData, { contentType: mimeType });
-          if (error) throw error;
-          
-          const { data: { publicUrl } } = supabase.storage.from('chat-attachments').getPublicUrl(filePath);
-          
-          const attachment: Attachment = { type, url: publicUrl, name, size, duration };
-          
-          if (type === 'audio') {
-             return attachment;
-          }
-
-          setAttachments(prev => [...prev, attachment]);
-          return attachment;
-      } catch (error: any) {
-          console.error('Upload failed', error.message);
-          return null;
-      }
-  };
-
-  const handleAttach = () => {
-    Keyboard.dismiss();
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-    setIsAttachmentOpen(prev => !prev);
-  };
-
+  // Attachment handling
   const pickImage = async () => {
-    Keyboard.dismiss();
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('Permission denied', 'We need access to your photos to send them.');
-      return;
-    }
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: false,
+        quality: 0.8,
+      });
 
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      quality: 0.8,
-    });
-
-    if (!result.canceled) {
-      setIsAttachmentOpen(false);
-      await uploadFile(result.assets[0].uri, 'image');
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const asset = result.assets[0];
+        // Check file size (limit to 10MB)
+        const fileInfo = await FileSystem.getInfoAsync(asset.uri);
+        if (fileInfo.exists && (fileInfo as any).size > 10 * 1024 * 1024) {
+          Alert.alert('File too large', 'Please select an image under 10MB');
+          return;
+        }
+        
+        const uploaded = await uploadFile(asset.uri, 'image');
+        if (uploaded) {
+          await sendMessageWithAttachment([uploaded]);
+        }
+      }
+    } catch (error) {
+      console.error('Error picking image:', error);
+      Alert.alert('Error', 'Failed to select image');
     }
   };
 
   const pickDocument = async () => {
-    Keyboard.dismiss();
-    const result = await DocumentPicker.getDocumentAsync({ type: '*/*', copyToCacheDirectory: true });
-    
-    if (!result.canceled) {
-      setIsAttachmentOpen(false);
-      await uploadFile(result.assets[0].uri, 'file', result.assets[0].name, result.assets[0].size);
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: '*/*',
+        copyToCacheDirectory: true,
+      });
+
+      if (result.canceled === false && result.assets && result.assets.length > 0) {
+        const asset = result.assets[0];
+        // Check file size (limit to 50MB)
+        const fileInfo = await FileSystem.getInfoAsync(asset.uri);
+        if (fileInfo.exists && (fileInfo as any).size > 50 * 1024 * 1024) {
+          Alert.alert('File too large', 'Please select a file under 50MB');
+          return;
+        }
+        
+        const uploaded = await uploadFile(asset.uri, 'file', asset.name, (fileInfo as any).size);
+        if (uploaded) {
+          await sendMessageWithAttachment([uploaded]);
+        }
+      }
+    } catch (error) {
+      console.error('Error picking document:', error);
+      Alert.alert('Error', 'Failed to select document');
     }
   };
 
+  // Upload file to Supabase Storage
+  const uploadFile = async (uri: string, type: 'image' | 'file' | 'audio', name?: string, size?: number, duration?: number): Promise<Attachment | null> => {
+    try {
+      // Create a unique filename
+      const ext = uri.split('.').pop() || (type === 'image' ? 'jpg' : type === 'audio' ? 'm4a' : 'bin');
+      const filename = `${Date.now()}_${Math.random().toString(36).substring(7)}.${ext}`;
+      const path = `${user?.id}/${filename}`;
+
+      // Read file as base64 or array buffer
+      const fileData = await FileSystem.readAsStringAsync(uri, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+
+      // Convert base64 to Uint8Array
+      const binaryString = atob(fileData);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+
+      // Upload to Supabase Storage
+      const { error: uploadError } = await supabase.storage
+        .from('chat-attachments')
+        .upload(path, bytes, {
+          contentType: type === 'image' ? 'image/jpeg' : type === 'audio' ? 'audio/m4a' : 'application/octet-stream',
+          upsert: false,
+        });
+
+      if (uploadError) throw uploadError;
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('chat-attachments')
+        .getPublicUrl(path);
+
+      return {
+        type,
+        url: publicUrl,
+        name: name || filename,
+        size,
+        duration,
+      };
+    } catch (error) {
+      console.error('Upload error:', error);
+      Alert.alert('Upload Failed', 'Failed to upload file. Please try again.');
+      return null;
+    }
+  };
+
+  // Send message with attachment
   const sendMessageWithAttachment = async (atts: Attachment[]) => {
-      if (!user) return;
-      
-      const optimisticMsg: Message = {
-        id: `opt_${Date.now()}_${Math.random()}`, 
-        sender_id: user.id,
-        receiver_id: friendId,
-        content: '',
-        attachments: atts,
-        created_at: new Date().toISOString(),
-        read_at: null,
-        is_edited: false
+    if (!user || atts.length === 0) return;
+    setSending(true);
+
+    const optimisticMsg: Message = {
+      id: `opt_${Date.now()}_${Math.random()}`,
+      sender_id: user.id,
+      receiver_id: friendId,
+      content: '',
+      attachments: atts,
+      created_at: new Date().toISOString(),
+      read_at: null,
+      is_edited: false,
+      reactions: {}
     };
 
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -575,294 +664,166 @@ export default function SingleChatScreen() {
         }
       }
 
-      await Audio.setAudioModeAsync({
-        allowsRecordingIOS: true,
-        playsInSilentModeIOS: true,
-        staysActiveInBackground: false,
-        shouldDuckAndroid: true,
-        playThroughEarpieceAndroid: false,
-      });
-
-      InCallManager.start({ media: 'audio' });
+      InCallManager.start({media: 'audio'});
       InCallManager.setForceSpeakerphoneOn(true);
 
       const { sound: newSound } = await Audio.Sound.createAsync(
-          { uri: url }, 
-          { shouldPlay: true }
+        { uri: url },
+        { shouldPlay: true }
       );
+      
       setSound(newSound);
       setPlayingAudioId(id);
 
       newSound.setOnPlaybackStatusUpdate((status) => {
-        if (status.isLoaded) {
-            setPlaybackStatus({ position: status.positionMillis, duration: status.durationMillis || 0 });
-            if (status.didJustFinish) {
-              setPlayingAudioId(null);
-              setSound(null);
-              setPlaybackStatus(null);
-              InCallManager.stop();
-            }
+        if ((status as any).didJustFinish) {
+          setPlayingAudioId(null);
+          InCallManager.stop();
         }
       });
     } catch (error) {
       console.error('Failed to play audio', error);
-      InCallManager.stop();
     }
   };
 
-  const handleImagePress = (imageUrl: string) => {
-    setViewerImages([{ uri: imageUrl }]);
-    setViewerIndex(0);
-    setViewerVisible(true);
-  };
-
-  const handleDownload = async (uri: string) => {
+  // Attachment actions
+  const downloadFile = async (url: string, name: string) => {
     try {
-      setImageActionLoading(true);
-      const { status } = await MediaLibrary.requestPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert('Permission denied', 'We need access to your photos to save images.');
-        setImageActionLoading(false);
-        return;
+      // Open share dialog for files
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(url, {
+          mimeType: '*/*',
+          dialogTitle: name || 'Download File',
+        });
+      } else {
+        Alert.alert('Sharing not available', 'Sharing is not available on this device');
       }
-
-      const fileName = uri.split('/').pop() || 'image.jpg';
-      const fileUri = FileSystem.documentDirectory + fileName;
-      const downloadResumable = FileSystem.createDownloadResumable(uri, fileUri);
-      const result = await downloadResumable.downloadAsync();
-
-      if (result) {
-        await MediaLibrary.saveToLibraryAsync(result.uri);
-        Alert.alert('Success', 'Image saved to gallery.');
-      }
-    } catch (e) {
-      console.error('Download error', e);
-      Alert.alert('Error', 'Failed to save image.');
-    } finally {
-      setImageActionLoading(false);
-    }
-  };
-
-  const handleShare = async (uri: string) => {
-    try {
-      setImageActionLoading(true);
-      const fileName = uri.split('/').pop() || 'image.jpg';
-      const fileUri = FileSystem.cacheDirectory + fileName;
-      const downloadResumable = FileSystem.createDownloadResumable(uri, fileUri);
-      const result = await downloadResumable.downloadAsync();
-
-      if (result) {
-        await Sharing.shareAsync(result.uri);
-      }
-    } catch (e) {
-      console.error('Share error', e);
-      Alert.alert('Error', 'Failed to share image.');
-    } finally {
-      setImageActionLoading(false);
-    }
-  };
-
-  const copyToClipboard = async (text: string) => {
-    await Clipboard.setStringAsync(text);
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-  };
-
-  const deleteMessage = async (messageId: string) => {
-    try {
-      const { error } = await supabase.from('messages').delete().eq('id', messageId);
-      if (error) throw error;
-      setMessages(prev => prev.filter(m => m.id !== messageId));
     } catch (error) {
-      console.error('Delete error', error);
-      Alert.alert('Error', 'Failed to delete message.');
+      console.error('Download error:', error);
+      Alert.alert('Download Failed', 'Failed to download file');
     }
   };
 
-  const MessageItem = React.memo(({ 
-    item, 
-    index, 
-    onLongPress,
-    isSelected,
-    isMenuClosing
-  }: { 
-    item: Message; 
-    index: number; 
-    onLongPress: (m: Message, x: number, y: number) => void;
-    isSelected: boolean;
-    isMenuClosing: boolean;
-  }) => {
-    const isMe = item.sender_id === user?.id;
-    const newerMessage = messages[index - 1];
-    const olderMessage = messages[index + 1];
-    const isSameSenderAsNewer = newerMessage && newerMessage.sender_id === item.sender_id;
-    const isSameSenderAsOlder = olderMessage && olderMessage.sender_id === item.sender_id;
-    const TIME_THRESHOLD = 60 * 1000;
-    const isWithinTime = newerMessage && (new Date(newerMessage.created_at).getTime() - new Date(item.created_at).getTime() < TIME_THRESHOLD);
-    const isLastInGroup = !isSameSenderAsNewer || !isWithinTime;
+  const copyFile = async (url: string) => {
+    try {
+      await Clipboard.setStringAsync(url);
+      Alert.alert('Copied', 'File URL copied to clipboard');
+    } catch (error) {
+      console.error('Copy error:', error);
+    }
+  };
 
-    const borderTopLeft = !isMe && isSameSenderAsOlder ? 4 : 20;
-    const borderTopRight = isMe && isSameSenderAsOlder ? 4 : 20;
-    const borderBottomLeft = !isMe && !isLastInGroup ? 4 : 20;
-    const borderBottomRight = isMe && !isLastInGroup ? 4 : 20;
+  // Attachment renderer
+  const renderAttachment = (att: Attachment, isMe: boolean) => {
+    const isImage = att.type === 'image';
+    const isAudio = att.type === 'audio';
+    const isPlaying = playingAudioId === `${att.url}`;
 
-    const scale = useSharedValue(1);
-
-    useEffect(() => {
-      const active = isSelected || isMenuClosing;
-      scale.value = withSpring(active ? 1.05 : 1, { damping: 55, stiffness: 520 });
-    }, [isSelected, isMenuClosing]);
-
-    const animatedStyle = useAnimatedStyle(() => ({
-      transform: [{ scale: scale.value }],
-      shadowOpacity: interpolate(scale.value, [1, 1.05], [0, 0.3]),
-      shadowRadius: interpolate(scale.value, [1, 1.05], [0, 15]),
-      shadowOffset: { width: 0, height: 10 },
-      shadowColor: '#000',
-      elevation: interpolate(scale.value, [1, 1.05], [0, 10]),
-      zIndex: (isSelected || isMenuClosing) ? 1000 : 1,
-    }));
-
-    const renderContent = (content: string) => {
-        const regex = /(?:^|\s)hlt:\/\/chat\?username=([a-zA-Z0-9_]+)(?:$|\s)/g;
-        const parts = [];
-        let lastIndex = 0;
-        let match;
-
-        while ((match = regex.exec(content)) !== null) {
-            // Add text before the match
-            if (match.index > lastIndex) {
-                parts.push(
-                    <Text key={`text-${lastIndex}`} style={{ color: isMe ? '#fff' : theme.text, fontSize: 16, lineHeight: 22 }}>
-                        {content.substring(lastIndex, match.index)}
-                    </Text>
-                );
-            }
-            // Add the widget
-            parts.push(
-                <View key={`widget-${match.index}`} style={{ marginVertical: 4 }}>
-                    <DeepLinkUserWidget username={match[1]} />
-                </View>
-            );
-            lastIndex = regex.lastIndex;
-        }
-
-        // Add remaining text
-        if (lastIndex < content.length) {
-            parts.push(
-                <Text key={`text-${lastIndex}`} style={{ color: isMe ? '#fff' : theme.text, fontSize: 16, lineHeight: 22 }}>
-                    {content.substring(lastIndex)}
-                </Text>
-            );
-        }
-
-        if (parts.length === 0) {
-             return (
-                <Text style={{ color: isMe ? '#fff' : theme.text, fontSize: 16, lineHeight: 22 }}>
-                  {content}
-                </Text>
-             );
-        }
-
-        return <View>{parts}</View>;
-    };
+    const isNearMe = isMe;
 
     return (
-      <View style={{ marginBottom: isLastInGroup ? 12 : 2, zIndex: (isSelected || isMenuClosing) ? 1000 : 1 }}>
-        <TouchableOpacity 
-          activeOpacity={0.8}
-          onLongPress={(e) => onLongPress(item, e.nativeEvent.pageX, e.nativeEvent.pageY)}
-          style={[styles.messageRow, { justifyContent: isMe ? 'flex-end' : 'flex-start' }]}
-        >
-          <Animated.View style={[
-              styles.bubble, 
-              animatedStyle,
-              { 
-                  backgroundColor: isMe ? theme.tint : (isDarkMode ? '#262626' : '#E5E5EA'),
-                  borderTopLeftRadius: borderTopLeft,
-                  borderTopRightRadius: borderTopRight,
-                  borderBottomLeftRadius: borderBottomLeft,
-                  borderBottomRightRadius: borderBottomRight,
-              }
-          ]}>
-            {item.attachments?.length > 0 && (
-                <View style={styles.attachmentContainer}>
-                    {item.attachments.map((att, idx) => (
-                        att.type === 'image' ? (
-                            <TouchableOpacity key={idx} onPress={() => handleImagePress(att.url)}>
-                                <Image 
-                                  source={{ uri: att.url }} 
-                                  style={styles.attachmentImage} 
-                                  contentFit="cover"
-                                  cachePolicy="memory-disk"
-                                  transition={200}
-                                />
-                            </TouchableOpacity>
-                        ) : att.type === 'audio' ? (
-                            <View key={idx} style={{ minWidth: 220 }}>
-                                <View style={[styles.audioContainer, { backgroundColor: 'transparent' }]}>
-                                    <TouchableOpacity 
-                                        onPress={() => playAudio(att.url, item.id + idx)} 
-                                        style={[styles.playButton, { backgroundColor: isMe ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)' }]}
-                                    >
-                                        <Ionicons 
-                                            name={playingAudioId === (item.id + idx) ? "pause" : "play"} 
-                                            size={16} 
-                                            color={isMe ? '#fff' : theme.text} 
-                                        />
-                                    </TouchableOpacity>
-                                    <View style={styles.audioWaveform}>
-                                        <View style={{ position: 'absolute', left: 0, right: 0, height: 2, backgroundColor: isMe ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.1)', borderRadius: 1 }} />
-                                        <View style={{ 
-                                            height: 2, 
-                                            backgroundColor: isMe ? '#fff' : theme.tint, 
-                                            width: (playingAudioId === (item.id + idx) && playbackStatus?.duration) 
-                                                ? `${(playbackStatus.position / playbackStatus.duration) * 100}%` 
-                                                : '0%', 
-                                            borderRadius: 1 
-                                        }} />
-                                    </View>
-                                    <Text style={{ color: isMe ? '#fff' : theme.text, fontSize: 11, fontWeight: '600', minWidth: 26, textAlign: 'right' }}>
-                                        {att.duration ? Math.round(att.duration / 1000) + 's' : ''}
-                                    </Text>
-                                </View>
-                            </View>
-                        ) : (
-                            <View key={idx} style={[styles.fileAttachment, { backgroundColor: isMe ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.05)' }]}>
-                                <Ionicons name="document-text" size={24} color={isMe ? '#fff' : theme.text} />
-                                <Text style={{ color: isMe ? '#fff' : theme.text, fontSize: 12, flex: 1 }} numberOfLines={1}>
-                                    {att.name || 'File'}
-                                </Text>
-                            </View>
-                        )
-                    ))}
-                </View>
-            )}
-            {!!item.content && renderContent(item.content)}
-          </Animated.View>
-        </TouchableOpacity>
-
-        {isLastInGroup && (
-           <View style={[styles.metadataContainer, { justifyContent: isMe ? 'flex-end' : 'flex-start', marginRight: isMe ? 10 : 0 }]}>
-               <Text style={[styles.timeText, { color: theme.tabIconDefault }]}>
-                  {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-               </Text>
-               {isMe && (
-                   <Ionicons 
-                      name={item.read_at ? "checkmark-done" : "checkmark"}
-                      size={14} 
-                      color={item.read_at ? theme.tint : theme.tabIconDefault} 
-                      style={{ marginLeft: 4 }}
-                   />
-               )}
-           </View>
+      <TouchableOpacity
+        key={att.url}
+        onPress={() => {
+          if (isImage) {
+            setViewerImages([{ uri: att.url }]);
+            setViewerIndex(0);
+            setViewerVisible(true);
+          } else if (isAudio) {
+            playAudio(att.url, `${att.url}`);
+          } else {
+            // Show options for files
+            Alert.alert(
+              'File Options',
+              att.name || 'File',
+              [
+                { text: 'Download', onPress: () => downloadFile(att.url, att.name || 'file') },
+                { text: 'Copy Link', onPress: () => copyFile(att.url) },
+                { text: 'Cancel', style: 'cancel' }
+              ]
+            );
+          }
+        }}
+        style={styles.attachmentItem}
+      >
+        {isImage ? (
+          <Image
+            source={{ uri: att.url }}
+            style={[styles.imageAttachment, { borderColor: isMe ? theme.tint : theme.border }]}
+            contentFit="cover"
+          />
+        ) : isAudio ? (
+          <View style={[styles.fileAttachment, { 
+            backgroundColor: isNearMe ? theme.tint : theme.cardBackground,
+          }]}>
+            <MaterialCommunityIcons 
+              name={isPlaying ? "pause" : "play"} 
+              size={24} 
+              color={isNearMe ? "#fff" : theme.tint} 
+            />
+            <Text style={[styles.fileText, { color: isNearMe ? "#fff" : theme.text }]} numberOfLines={1}>
+              {att.name || 'Audio'}
+            </Text>
+            {att.duration ? (
+              <Text style={[styles.durationText, { color: isNearMe ? "rgba(255,255,255,0.7)" : theme.tabIconDefault }]}>
+                {Math.round(att.duration / 1000)}s
+              </Text>
+            ) : null}
+          </View>
+        ) : (
+          <View style={[styles.fileAttachment, { 
+            backgroundColor: isMe ? theme.tint : theme.cardBackground,
+          }]}>
+            <MaterialCommunityIcons name="file-document" size={24} color={isMe ? "#fff" : theme.tint} />
+            <Text style={[styles.fileText, { color: isMe ? "#fff" : theme.text }]} numberOfLines={1}>
+              {att.name || 'File'}
+            </Text>
+            {att.size ? (
+              <Text style={[styles.sizeText, { color: isMe ? "rgba(255,255,255,0.7)" : theme.tabIconDefault }]}>
+                {(att.size / 1024 / 1024).toFixed(2)} MB
+              </Text>
+            ) : null}
+          </View>
         )}
-      </View>
+      </TouchableOpacity>
     );
-  });
+  };
 
-  const MessageContextMenu = () => {
-    const isMyMessage = selectedMessage?.sender_id === user?.id;
-    const menuWidth = Platform.OS === 'ios' ? 250 : 220;
+  // Attachment picker modal
+  const AttachmentPicker = () => {
+    if (!isAttachmentOpen) return null;
+
+    return (
+      <>
+        <TouchableOpacity 
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setIsAttachmentOpen(false)}
+        />
+        <View style={[styles.attachmentMenu, { backgroundColor: theme.cardBackground, borderTopColor: theme.border }]}>
+          <TouchableOpacity style={styles.attachmentOption} onPress={pickImage}>
+            <View style={[styles.optionIcon, { backgroundColor: theme.tint }]}>
+              <MaterialCommunityIcons name="image" size={28} color="#fff" />
+            </View>
+            <Text style={[styles.optionText, { color: theme.text }]}>Photo</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.attachmentOption} onPress={pickDocument}>
+            <View style={[styles.optionIcon, { backgroundColor: '#5856D6' }]}>
+              <MaterialCommunityIcons name="file-document" size={28} color="#fff" />
+            </View>
+            <Text style={[styles.optionText, { color: theme.text }]}>File</Text>
+          </TouchableOpacity>
+        </View>
+      </>
+    );
+  };
+
+  // Message menu
+  const MessageMenu = () => {
+    if (!selectedMessage) return null;
+
+    const isMyMessage = selectedMessage.sender_id === user?.id;
+    const menuWidth = 220;
 
     const animatedStyle = useAnimatedStyle(() => ({
       transform: [{ scale: menuScale.value }],
@@ -870,17 +831,14 @@ export default function SingleChatScreen() {
       opacity: menuOpacity.value,
     }));
 
-    const animatedBackdrop = useAnimatedStyle(() => ({
-      opacity: menuAnimation.value * 0.3,
-      pointerEvents: menuAnimation.value > 0 ? 'auto' : 'none',
+    const backdropStyle = useAnimatedStyle(() => ({
+      opacity: menuAnimation.value * 0.4,
     }));
-
-    if (!selectedMessage || menuAnimation.value === 0) return null;
 
     return (
       <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
         <Animated.View 
-          style={[StyleSheet.absoluteFill, { backgroundColor: '#000', position: 'absolute' }, animatedBackdrop]} 
+          style={[StyleSheet.absoluteFill, { backgroundColor: '#000', position: 'absolute' }, backdropStyle]} 
           pointerEvents="auto"
         >
           <TouchableOpacity 
@@ -900,30 +858,156 @@ export default function SingleChatScreen() {
             width: menuWidth,
           }
         ]}>
+          <View style={styles.reactionMenuRow}>
+            {REACTION_EMOJIS.map((emoji) => (
+              <Pressable
+                key={`react-${emoji}`}
+                style={styles.reactionMenuButton}
+                onPress={() => {
+                  toggleReaction(selectedMessage, emoji);
+                  closeMenu();
+                }}
+              >
+                <Text style={styles.reactionMenuEmoji}>{emoji}</Text>
+              </Pressable>
+            ))}
+          </View>
+          <View style={[styles.menuDivider, { backgroundColor: theme.border }]} />
           {!!selectedMessage.content && (
-            <TouchableOpacity 
-              style={styles.menuItem} 
+            <TouchableOpacity
+              style={styles.menuItem}
               activeOpacity={0.7}
-              onPress={() => { copyToClipboard(selectedMessage.content); closeMenu(); }}
+              onPress={() => { Clipboard.setStringAsync(selectedMessage.content); closeMenu(); }}
             >
               <Text style={[styles.menuItemText, { color: theme.text }]}>Copy</Text>
-              <Ionicons name="copy-outline" size={Platform.OS === 'ios' ? 20 : 22} color={theme.text} />
+              <MaterialCommunityIcons name="content-copy" size={20} color={theme.text} />
             </TouchableOpacity>
           )}
+
           {isMyMessage && (
             <>
               <View style={[styles.menuDivider, { backgroundColor: theme.border }]} />
-              <TouchableOpacity 
-                style={styles.menuItem} 
+              <TouchableOpacity
+                style={styles.menuItem}
                 activeOpacity={0.7}
-                onPress={() => { deleteMessage(selectedMessage.id); closeMenu(); }}
+                onPress={() => { 
+                  supabase.from('messages').delete().eq('id', selectedMessage.id).then(() => {
+                    setMessages(prev => prev.filter(m => m.id !== selectedMessage.id));
+                  });
+                  closeMenu(); 
+                }}
               >
                 <Text style={[styles.menuItemText, { color: '#FF3B30' }]}>Delete</Text>
-                <Ionicons name="trash-outline" size={Platform.OS === 'ios' ? 20 : 22} color="#FF3B30" />
+                <MaterialCommunityIcons name="delete" size={20} color="#FF3B30" />
               </TouchableOpacity>
             </>
           )}
         </Animated.View>
+      </View>
+    );
+  };
+
+  // Message item component
+  const MessageItem = ({ 
+    item, 
+    index, 
+    isSelected, 
+    isMenuClosing,
+    onLongPress 
+  }: { 
+    item: Message; 
+    index: number; 
+    isSelected: boolean;
+    isMenuClosing: boolean;
+    onLongPress: (m: Message, x: number, y: number) => void;
+  }) => {
+    const isMe = item.sender_id === user?.id;
+    const newerMessage = messages[index - 1];
+    const isSameSender = newerMessage && newerMessage.sender_id === item.sender_id;
+    const TIME_THRESHOLD = 60 * 1000;
+    const isWithinTime = newerMessage && (new Date(newerMessage.created_at).getTime() - new Date(item.created_at).getTime() < TIME_THRESHOLD);
+    const isLastInGroup = !isSameSender || !isWithinTime;
+    const reactionEntries = Object.entries(item.reactions || {}).filter(([, users]) => Array.isArray(users) && users.length > 0);
+
+    const handleLongPress = (event: any) => {
+      const { nativeEvent } = event;
+      onLongPress(item, nativeEvent.pageX, nativeEvent.pageY);
+    };
+
+    return (
+      <View style={{ marginBottom: isLastInGroup ? 12 : 2 }}>
+        <TouchableOpacity
+          onLongPress={handleLongPress}
+          activeOpacity={0.9}
+        >
+          <View
+            style={[
+              styles.messageRow,
+              {
+                justifyContent: isMe ? 'flex-end' : 'flex-start',
+                opacity: isMenuClosing ? 0.3 : 1,
+              },
+            ]}
+          >
+            <View
+              style={[
+                styles.bubble,
+                {
+                  backgroundColor: isMe ? theme.tint : theme.cardBackground,
+                  borderTopLeftRadius: !isMe && !isLastInGroup ? 4 : 16,
+                  borderTopRightRadius: isMe && !isLastInGroup ? 4 : 16,
+                  borderBottomLeftRadius: !isMe ? 4 : 16,
+                  borderBottomRightRadius: isMe ? 4 : 16,
+                },
+              ]}
+            >
+              {item.attachments?.map(att => renderAttachment(att, isMe))}
+              {!!item.content && (
+                <Text style={[styles.messageText, { color: isMe ? '#fff' : theme.text }]}>
+                  {item.content}
+                </Text>
+              )}
+              {item.is_edited && (
+                <Text style={[styles.editedText, { color: isMe ? 'rgba(255,255,255,0.6)' : theme.tabIconDefault }]}>
+                  edited
+                </Text>
+              )}
+            </View>
+          </View>
+        </TouchableOpacity>
+
+        {reactionEntries.length > 0 && (
+          <View style={[styles.reactionRow, { justifyContent: isMe ? 'flex-end' : 'flex-start' }]}> 
+            {reactionEntries.map(([emoji, users]) => (
+              <View
+                key={`${item.id}-${emoji}`}
+                style={[
+                  styles.reactionChip,
+                  { backgroundColor: isMe ? 'rgba(255,255,255,0.2)' : theme.cardBackground }
+                ]}
+              >
+                <Text style={[styles.reactionEmoji, { color: isMe ? '#fff' : theme.text }]}>{emoji}</Text>
+                <Text style={[styles.reactionCount, { color: isMe ? '#fff' : theme.text }]}>{users.length}</Text>
+              </View>
+            ))}
+          </View>
+        )}
+
+        {isLastInGroup && (
+          <View style={[styles.metadataContainer, { justifyContent: isMe ? 'flex-end' : 'flex-start' }]}>
+            <Text style={[styles.timeText, { color: theme.tabIconDefault }]}>
+              {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            </Text>
+            {isMe && (
+              <MaterialCommunityIcons
+                name={item.read_at ? "check-all" : "check"}
+                size={14}
+                color={item.read_at ? theme.tint : theme.tabIconDefault}
+                style={{ marginLeft: 4 }}
+              />
+            )}
+          </View>
+        )}
       </View>
     );
   };
@@ -933,53 +1017,97 @@ export default function SingleChatScreen() {
       {connectionStatus !== 'connected' && (
         <ActivityIndicator size="small" color={theme.tint} style={{ marginRight: 8 }} />
       )}
-      <View style={{ alignItems: Platform.OS === 'ios' ? 'center' : 'flex-start' }}>
+      <View style={{ alignItems: 'center' }}>
         <Text style={{ color: theme.text, fontSize: 17, fontWeight: '600' }}>
           {connectionStatus === 'connected' ? friendName : 'Connecting...'}
         </Text>
         {connectionStatus === 'connected' && (
-           <Text style={{ color: theme.tabIconDefault, fontSize: 11 }}>Online</Text>
+          <Text style={{ color: theme.tabIconDefault, fontSize: 11 }}>Online</Text>
         )}
       </View>
     </View>
   );
 
-  const headerHeight = (Platform.OS === 'ios' ? 44 : 56) + insets.top;
-
   const renderHeaderRight = () => {
     const nativeEnabled = isEnabled('ENABLE_CALLING') && callService.isSupported();
     
-    if (!nativeEnabled) return null;
-
     return (
       <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+        {nativeEnabled && (
+          <TouchableOpacity 
+            onPress={() => {
+              setIsCallInProgress(true);
+              router.push({
+                pathname: '/call/[id]',
+                params: { id: friendId, friendId, friendName, friendAvatar: friendAvatar || '', isIncoming: 'false', isVideo: 'false' }
+              });
+            }}
+            style={{ marginRight: 15 }}
+          >
+            <MaterialCommunityIcons name="phone-outline" size={24} color={theme.tint} />
+          </TouchableOpacity>
+        )}
+        {nativeEnabled && (
+          <TouchableOpacity 
+            onPress={() => {
+              setIsCallInProgress(true);
+              router.push({
+                pathname: '/call/[id]',
+                params: { id: friendId, friendId, friendName, friendAvatar: friendAvatar || '', isIncoming: 'false', isVideo: 'true' }
+              });
+            }}
+            style={{ marginRight: 10 }}
+          >
+            <MaterialCommunityIcons name="video-outline" size={26} color={theme.tint} />
+          </TouchableOpacity>
+        )}
         <TouchableOpacity 
           onPress={() => {
-            setIsCallInProgress(true);
             router.push({
-              pathname: '/call/[id]',
-              params: { id: friendId, friendId, friendName, friendAvatar: friendAvatar || '', isIncoming: 'false', isVideo: 'false' }
+              pathname: '/chat-info',
+              params: { friendId, friendName, friendAvatar: friendAvatar || '' }
             });
           }}
-          style={{ marginRight: 15 }}
+          style={{ marginRight: 8 }}
         >
-          <Ionicons name="call-outline" size={24} color={theme.tint} />
-        </TouchableOpacity>
-        <TouchableOpacity 
-          onPress={() => {
-            setIsCallInProgress(true);
-            router.push({
-              pathname: '/call/[id]',
-              params: { id: friendId, friendId, friendName, friendAvatar: friendAvatar || '', isIncoming: 'false', isVideo: 'true' }
-            });
-          }}
-          style={{ marginRight: 10 }}
-        >
-          <Ionicons name="videocam-outline" size={26} color={theme.tint} />
+          <MaterialCommunityIcons name="information-outline" size={26} color={theme.tint} />
         </TouchableOpacity>
       </View>
     );
   };
+
+  const headerHeight = 44 + insets.top;
+
+  // Render lock overlay - should cover everything when locked
+  if (isChatLocked && showLockOverlay) {
+    return (
+      <View style={[styles.container, { backgroundColor: theme.background }]}>
+        <AppBar 
+          centerComponent={renderHeaderTitle()}
+          rightComponent={renderHeaderRight()}
+          isNative={true}
+        />
+        <View style={styles.lockOverlay}>
+          <View style={[styles.lockContent, { backgroundColor: theme.background }]}>
+            <View style={styles.lockIconContainer}>
+              <MaterialCommunityIcons name="lock" size={48} color={theme.tint} />
+            </View>
+            <Text style={[styles.lockTitle, { color: theme.text }]}>Chat Locked</Text>
+            <Text style={[styles.lockSubtitle, { color: theme.tabIconDefault }]}>
+              This chat is locked. Authenticate to view messages.
+            </Text>
+            <TouchableOpacity 
+              style={[styles.unlockButton, { backgroundColor: theme.tint }]}
+              onPress={unlockChat}
+            >
+              <MaterialCommunityIcons name="fingerprint" size={24} color="#fff" />
+              <Text style={styles.unlockButtonText}>Unlock with Biometrics</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
@@ -1017,238 +1145,219 @@ export default function SingleChatScreen() {
           maxToRenderPerBatch={5}
           initialNumToRender={10}
           onEndReached={() => {
-              if (hasMore && !loading) {
-                  setPage(p => {
-                      const nextPage = p + 1;
-                      fetchMessages(nextPage);
-                      return nextPage;
-                  });
-              }
+            if (hasMore && !loading) {
+              setPage(p => {
+                const nextPage = p + 1;
+                fetchMessages(nextPage);
+                return nextPage;
+              });
+            }
           }}
           onEndReachedThreshold={0.5}
         />
 
-        <View style={[styles.inputWrapper, { backgroundColor: theme.background, borderTopColor: theme.border, paddingBottom: Math.max(insets.bottom, 6) }]}>
-          {attachments.length > 0 && (
-              <ScrollView horizontal style={styles.previewContainer} showsHorizontalScrollIndicator={false}>
-                  {attachments.map((att, i) => (
-                      <View key={i} style={styles.previewItem}>
-                          {att.type === 'image' ? (
-                               <RNImage source={{ uri: att.url }} style={{ width: 60, height: 60, borderRadius: 8 }} />
-                          ) : (
-                               <View style={[styles.filePreview, { borderColor: theme.border }]}>
-                                   <Ionicons name="document" size={24} color={theme.text} />
-                               </View>
-                          )}
-                          <TouchableOpacity onPress={() => setAttachments(prev => prev.filter((_, idx) => idx !== i))} style={styles.removeAttachment}>
-                              <Ionicons name="close-circle" size={20} color={theme.text} />
-                          </TouchableOpacity>
-                      </View>
-                  ))}
-              </ScrollView>
-          )}
+        <AttachmentPicker />
 
-          <View style={styles.innerContainer}>
-              <TouchableOpacity onPress={handleAttach} style={styles.iconButton}>
-                  <Ionicons name={isAttachmentOpen ? "close" : "add"} size={32} color={theme.tint} />
-              </TouchableOpacity>
-              
-              <TextInput 
-                  style={[
-                      styles.input, 
-                      { 
-                          backgroundColor: isDarkMode ? '#1c1c1e' : '#fff',
-                          color: theme.text,
-                      }
-                  ]} 
-                  placeholder="Message" 
-                  placeholderTextColor={theme.tabIconDefault} 
-                  value={inputText} 
-                  onChangeText={setInputText} 
-                  multiline 
-                  selectionColor={theme.tint}
+        <View style={[styles.inputWrapper, { backgroundColor: theme.background, paddingBottom: Math.max(insets.bottom, 12) }]}>
+          <View style={styles.inputContainer}>
+            <TouchableOpacity
+              style={[styles.attachButton, { backgroundColor: theme.cardBackground }]}
+              onPress={() => setIsAttachmentOpen(!isAttachmentOpen)}
+            >
+              <MaterialCommunityIcons name="plus" size={24} color={theme.tint} />
+            </TouchableOpacity>
+
+            <View style={[styles.textInputContainer, { backgroundColor: theme.cardBackground }]}>
+              <TextInput
+                style={[styles.textInput, { color: theme.text }]}
+                placeholder="Message"
+                placeholderTextColor={theme.tabIconDefault}
+                value={inputText}
+                onChangeText={setInputText}
+                multiline
               />
-              
-              {(inputText.trim().length > 0 || attachments.length > 0) ? (
-                  <TouchableOpacity onPress={handleSend} disabled={sending} style={[styles.sendButton, { backgroundColor: theme.tint }]}>
-                      {sending ? <ActivityIndicator size="small" color="#fff" /> : <Ionicons name="arrow-up" size={20} color="#fff" />}
-                  </TouchableOpacity>
-              ) : (
-                  <TouchableOpacity 
-                    onPressIn={startRecording} 
-                    onPressOut={stopAndSendRecording}
-                    style={[styles.sendButton, { backgroundColor: isRecording ? '#FF3B30' : theme.tabIconDefault }]}
-                  >
-                    <Ionicons name="mic" size={20} color="#fff" />
-                  </TouchableOpacity>
-              )}
+            </View>
+
+            {inputText.trim().length > 0 ? (
+              <TouchableOpacity
+                style={[styles.sendButton, { backgroundColor: theme.tint }]}
+                onPress={handleSend}
+                disabled={sending}
+              >
+                {sending ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <MaterialCommunityIcons name="send" size={20} color="#fff" />
+                )}
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity
+                style={[styles.sendButton, { backgroundColor: isRecording ? '#FF3B30' : theme.tint }]}
+                onPressIn={startRecording}
+                onPressOut={stopAndSendRecording}
+              >
+                <MaterialCommunityIcons 
+                  name={isRecording ? "microphone" : "microphone"} 
+                  size={20} 
+                  color="#fff" 
+                />
+              </TouchableOpacity>
+            )}
           </View>
-          
-          {isAttachmentOpen && (
-              <View style={[styles.attachmentMenu, { borderTopColor: theme.border }]}>
-                  <TouchableOpacity style={styles.attachmentOption} onPress={pickImage}>
-                      <View style={[styles.optionIcon, { backgroundColor: '#007AFF' }]}>
-                          <Ionicons name="image" size={24} color="#fff" />
-                      </View>
-                      <Text style={[styles.optionText, { color: theme.text }]}>Photos</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={styles.attachmentOption} onPress={pickDocument}>
-                      <View style={[styles.optionIcon, { backgroundColor: '#5856D6' }]}>
-                          <Ionicons name="document-text" size={24} color="#fff" />
-                      </View>
-                      <Text style={[styles.optionText, { color: theme.text }]}>Document</Text>
-                  </TouchableOpacity>
-              </View>
-          )}
         </View>
       </KeyboardAvoidingView>
 
+      <MessageMenu />
+      
       <ImageView
         images={viewerImages}
         imageIndex={viewerIndex}
         visible={viewerVisible}
         onRequestClose={() => setViewerVisible(false)}
-        FooterComponent={({ imageIndex }) => (
-          <View style={[styles.viewerFooter, { paddingBottom: Math.max(insets.bottom, 20) }]}>
-            {imageActionLoading ? (
-              <View style={styles.footerLoading}>
-                <ActivityIndicator color="#fff" size="small" />
-                <Text style={styles.footerButtonText}>Processing...</Text>
-              </View>
-            ) : (
-              <>
-                <TouchableOpacity 
-                  style={styles.footerButton} 
-                  onPress={() => handleShare(viewerImages[imageIndex].uri)}
-                >
-                  <Ionicons name="share-outline" size={24} color="#fff" />
-                  <Text style={styles.footerButtonText}>Share</Text>
-                </TouchableOpacity>
-                
-                <TouchableOpacity 
-                  style={styles.footerButton} 
-                  onPress={() => handleDownload(viewerImages[imageIndex].uri)}
-                >
-                  <Ionicons name="download-outline" size={24} color="#fff" />
-                  <Text style={styles.footerButtonText}>Save</Text>
-                </TouchableOpacity>
-              </>
-            )}
-          </View>
-        )}
       />
-
-      <MessageContextMenu />
     </View>
   );
-};
+}
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  listContent: { paddingHorizontal: 16, paddingVertical: 10 },
-  messageRow: { flexDirection: 'row', alignItems: 'flex-end' },
-  bubble: { maxWidth: '75%', paddingHorizontal: 12, paddingVertical: 8, overflow: 'visible' },
-  attachmentContainer: { marginBottom: 6 },
-  attachmentImage: { width: 200, height: 150, borderRadius: 12, marginBottom: 4 },
-  fileAttachment: { flexDirection: 'row', alignItems: 'center', padding: 10, borderRadius: 8, gap: 8, maxWidth: 200 },
-  metadataContainer: { flexDirection: 'row', alignItems: 'center', marginTop: 2 },
-  timeText: { fontSize: 10, opacity: 0.7 },
-  
-  inputWrapper: {
-    borderTopWidth: StyleSheet.hairlineWidth,
-    paddingVertical: 8,
-    paddingHorizontal: 8,
-  },
-  innerContainer: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    gap: 8,
-  },
-  iconButton: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderRadius: 20, // Optional: for touch feedback
-  },
-  input: {
+  container: {
     flex: 1,
-    borderRadius: 20,
+  },
+  listContent: {
     paddingHorizontal: 16,
-    paddingTop: 10,
-    paddingBottom: 10,
-    fontSize: 16,
-    maxHeight: 120,
-  },
-  sendButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  
-  previewContainer: { flexDirection: 'row', marginBottom: 0, paddingHorizontal: 10, paddingTop: 10 },
-  previewItem: { marginRight: 10, position: 'relative' },
-  filePreview: { width: 60, height: 60, borderRadius: 8, borderWidth: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(128,128,128,0.1)' },
-  removeAttachment: { position: 'absolute', top: -8, right: -8, backgroundColor: '#fff', borderRadius: 12, overflow: 'hidden' },
-  attachmentMenu: { flexDirection: 'row', justifyContent: 'space-around', paddingVertical: 20, borderTopWidth: StyleSheet.hairlineWidth },
-  attachmentOption: { alignItems: 'center' },
-  optionIcon: { width: 50, height: 50, borderRadius: 25, justifyContent: 'center', alignItems: 'center', marginBottom: 8 },
-  optionText: { fontSize: 12, fontWeight: '500' },
-  
-  audioContainer: { flexDirection: 'row', alignItems: 'center', padding: 6, borderRadius: 18, gap: 8 },
-  playButton: { width: 30, height: 30, borderRadius: 15, justifyContent: 'center', alignItems: 'center' },
-  audioWaveform: { flex: 1, height: 16, justifyContent: 'center' },
-
-  viewerFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.5)',
     paddingVertical: 10,
   },
-  footerButton: {
-    alignItems: 'center',
-    gap: 4,
+  messageRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
   },
-  footerLoading: {
+  bubble: {
+    maxWidth: '75%',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    overflow: 'hidden',
+  },
+  messageText: {
+    fontSize: 15,
+    lineHeight: 20,
+  },
+  editedText: {
+    fontSize: 11,
+    marginTop: 2,
+    alignSelf: 'flex-end',
+  },
+  metadataContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    justifyContent: 'center',
-    flex: 1,
+    marginTop: 2,
   },
-  footerButtonText: {
-    color: '#fff',
+  timeText: {
+    fontSize: 11,
+  },
+  attachmentItem: {
+    marginBottom: 4,
+  },
+  imageAttachment: {
+    width: 200,
+    height: 200,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  fileAttachment: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 8,
+    borderRadius: 8,
+    gap: 8,
+  },
+  fileText: {
+    flex: 1,
+    fontSize: 14,
+  },
+  sizeText: {
+    fontSize: 12,
+    marginLeft: 4,
+  },
+  durationText: {
+    fontSize: 12,
+    marginLeft: 4,
+  },
+  inputWrapper: {
+    paddingHorizontal: 12,
+    paddingTop: 8,
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  attachButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  textInputContainer: {
+    flex: 1,
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    maxHeight: 100,
+  },
+  textInput: {
+    fontSize: 16,
+    paddingVertical: 8,
+    maxHeight: 100,
+  },
+  sendButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    zIndex: 100,
+  },
+  attachmentMenu: {
+    position: 'absolute',
+    bottom: 70,
+    left: 16,
+    right: 16,
+    borderRadius: 16,
+    padding: 16,
+    flexDirection: 'row',
+    gap: 24,
+    zIndex: 101,
+    borderTopWidth: 1,
+  },
+  attachmentOption: {
+    alignItems: 'center',
+    gap: 8,
+  },
+  optionIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  optionText: {
     fontSize: 12,
     fontWeight: '500',
   },
-  modalOverlay: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-  },
-  menuContainer: {
-    width: '100%',
-    alignItems: 'center',
-  },
-  iosMenu: {
+  customMenu: {
     borderRadius: 14,
     overflow: 'hidden',
     width: 250,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.15,
     shadowRadius: 20,
-  },
-  androidMenu: {
-    borderRadius: 4,
-    overflow: 'hidden',
-    width: 200,
     elevation: 8,
-    alignSelf: 'center',
+    zIndex: 1000,
   },
   menuItem: {
     flexDirection: 'row',
@@ -1260,18 +1369,88 @@ const styles = StyleSheet.create({
   menuItemText: {
     fontSize: 17,
   },
+  reactionMenuRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  reactionMenuButton: {
+    paddingVertical: 6,
+    paddingHorizontal: 6,
+    borderRadius: 10,
+  },
+  reactionMenuEmoji: {
+    fontSize: 20,
+  },
+  reactionRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginTop: 6,
+  },
+  reactionChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    gap: 4,
+  },
+  reactionEmoji: {
+    fontSize: 14,
+  },
+  reactionCount: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
   menuDivider: {
     height: StyleSheet.hairlineWidth,
     width: '100%',
   },
-  customMenu: {
-    borderRadius: 14,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.15,
-    shadowRadius: 20,
-    elevation: 8,
-    zIndex: 1000,
+  // Lock overlay styles
+  lockOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  lockContent: {
+    alignItems: 'center',
+    padding: 32,
+    borderRadius: 16,
+  },
+  lockIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: 'rgba(128, 128, 128, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  lockTitle: {
+    fontSize: 24,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  lockSubtitle: {
+    fontSize: 15,
+    textAlign: 'center',
+    marginBottom: 32,
+    maxWidth: 250,
+  },
+  unlockButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+  },
+  unlockButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

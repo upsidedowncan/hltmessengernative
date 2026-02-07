@@ -20,12 +20,26 @@ import {
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  withTiming,
+  runOnJS,
+} from 'react-native-reanimated';
+import * as LocalAuthentication from 'expo-local-authentication';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import * as Clipboard from 'expo-clipboard';
+import * as Haptics from 'expo-haptics';
 import { useTheme } from '@/contexts/theme-context';
 import { useAuth } from '@/contexts/auth-context';
 import { supabase } from '@/services/supabase';
 import { AppBar } from '@/components/app-bar';
 import { useSendNotification } from '@/hooks/use-send-notification';
 import { LiquidGlassView, LiquidGlassContainerView, isLiquidGlassSupported } from '@callstack/liquid-glass';
+import { Image } from 'expo-image';
+import { Host, Button } from '@expo/ui/swift-ui';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -40,6 +54,8 @@ type Attachment = {
   size?: number;
 };
 
+type Reactions = Record<string, string[]>;
+
 type Message = {
   id: string;
   content: string;
@@ -49,7 +65,10 @@ type Message = {
   read_at: string | null;
   attachments: Attachment[];
   is_edited: boolean;
+  reactions?: Reactions | null;
 };
+
+const REACTION_EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '👏'];
 
 export default function SingleChatScreen() {
   const router = useRouter();
@@ -68,6 +87,9 @@ export default function SingleChatScreen() {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'disconnected'>('connecting');
+  const [isChatLocked, setIsChatLocked] = useState(false);
+  const [biometricAvailable, setBiometricAvailable] = useState(false);
+  const [showLockOverlay, setShowLockOverlay] = useState(false);
 
   const flatListRef = useRef<FlatList>(null);
   const CACHE_KEY = `chat_${user?.id}_${friendId}`;
@@ -119,6 +141,21 @@ export default function SingleChatScreen() {
     menuOpacity.value = withTiming(1, { duration: 150 });
   };
 
+  const unlockChat = async () => {
+    if (!biometricAvailable) {
+      Alert.alert('Not Available', 'Biometric authentication is not available on this device.');
+      return;
+    }
+
+    const result = await LocalAuthentication.authenticateAsync({
+      promptMessage: 'Authenticate to unlock this chat',
+    });
+
+    if (result.success) {
+      setShowLockOverlay(false);
+    }
+  };
+
   useEffect(() => {
     if (selectedMessage) {
       setSelectedMessage(null);
@@ -127,6 +164,18 @@ export default function SingleChatScreen() {
   }, [messages.length]);
 
   useEffect(() => {
+    const checkBiometricAndLock = async () => {
+      const compatible = await LocalAuthentication.hasHardwareAsync();
+      setBiometricAvailable(compatible);
+      
+      const locked = await AsyncStorage.getItem(`locked_chat_${friendId}`);
+      if (locked === 'true') {
+        setIsChatLocked(true);
+        setShowLockOverlay(true);
+      }
+    };
+    checkBiometricAndLock();
+    
     loadCachedMessages();
     fetchMessages(0);
     subscribeToMessages();
@@ -301,7 +350,8 @@ export default function SingleChatScreen() {
       attachments: attachments,
       created_at: new Date().toISOString(),
       read_at: null,
-      is_edited: false
+      is_edited: false,
+      reactions: {}
     };
 
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -355,6 +405,43 @@ export default function SingleChatScreen() {
     }
   };
 
+  const updateMessageReactions = (messageId: string, reactions: Reactions) => {
+    setMessages(prev => prev.map(m => (m.id === messageId ? { ...m, reactions } : m)));
+  };
+
+  const toggleReaction = async (message: Message, emoji: string) => {
+    if (!user || message.id.startsWith('opt_')) return;
+
+    const existing = (message.reactions || {}) as Reactions;
+    const current = new Set(existing[emoji] || []);
+    const hasReacted = current.has(user.id);
+
+    if (hasReacted) {
+      current.delete(user.id);
+    } else {
+      current.add(user.id);
+    }
+
+    const updated: Reactions = { ...existing };
+    if (current.size === 0) {
+      delete updated[emoji];
+    } else {
+      updated[emoji] = Array.from(current);
+    }
+
+    updateMessageReactions(message.id, updated);
+
+    try {
+      const { error } = await supabase
+        .from('messages')
+        .update({ reactions: updated })
+        .eq('id', message.id);
+      if (error) throw error;
+    } catch (error) {
+      updateMessageReactions(message.id, existing);
+    }
+  };
+
   const MessageItem = React.memo(({
     item,
     index,
@@ -372,6 +459,7 @@ export default function SingleChatScreen() {
     const TIME_THRESHOLD = 60 * 1000;
     const isWithinTime = newerMessage && (new Date(newerMessage.created_at).getTime() - new Date(item.created_at).getTime() < TIME_THRESHOLD);
     const isLastInGroup = !isSameSenderAsNewer || !isWithinTime;
+    const reactionEntries = Object.entries(item.reactions || {}).filter(([, users]) => Array.isArray(users) && users.length > 0);
 
     const borderTopLeft = !isMe && isSameSenderAsOlder ? 4 : 20;
     const borderTopRight = isMe && isSameSenderAsOlder ? 4 : 20;
@@ -441,6 +529,23 @@ export default function SingleChatScreen() {
           )}
         </TouchableOpacity>
 
+        {reactionEntries.length > 0 && (
+          <View style={[styles.reactionRow, { justifyContent: isMe ? 'flex-end' : 'flex-start' }]}> 
+            {reactionEntries.map(([emoji, users]) => (
+              <View
+                key={`${item.id}-${emoji}`}
+                style={[
+                  styles.reactionChip,
+                  { backgroundColor: isMe ? 'rgba(255,255,255,0.2)' : (isDarkMode ? '#1c1c1e' : '#f2f2f7') }
+                ]}
+              >
+                <Text style={[styles.reactionEmoji, { color: isMe ? '#fff' : theme.text }]}>{emoji}</Text>
+                <Text style={[styles.reactionCount, { color: isMe ? '#fff' : theme.text }]}>{users.length}</Text>
+              </View>
+            ))}
+          </View>
+        )}
+
         {isLastInGroup && (
           <View style={[styles.metadataContainer, { justifyContent: isMe ? 'flex-end' : 'flex-start', marginRight: isMe ? 10 : 0 }]}>
             <Text style={[styles.timeText, { color: theme.tabIconDefault }]}>
@@ -501,6 +606,21 @@ export default function SingleChatScreen() {
             width: menuWidth,
           }
         ]}>
+          <View style={styles.reactionMenuRow}>
+            {REACTION_EMOJIS.map((emoji) => (
+              <Pressable
+                key={`react-${emoji}`}
+                style={styles.reactionMenuButton}
+                onPress={() => {
+                  toggleReaction(selectedMessage, emoji);
+                  closeMenu();
+                }}
+              >
+                <Text style={styles.reactionMenuEmoji}>{emoji}</Text>
+              </Pressable>
+            ))}
+          </View>
+          <View style={[styles.menuDivider, { backgroundColor: theme.border }]} />
           {!!selectedMessage.content && (
             <TouchableOpacity
               style={styles.menuItem}
@@ -550,6 +670,26 @@ export default function SingleChatScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
+      {isChatLocked && showLockOverlay && (
+        <View style={styles.lockOverlay}>
+          <View style={[styles.lockContent, { backgroundColor: theme.background }]}>
+            <View style={styles.lockIconContainer}>
+              <Ionicons name="lock-closed" size={48} color={theme.tint} />
+            </View>
+            <Text style={[styles.lockTitle, { color: theme.text }]}>Chat Locked</Text>
+            <Text style={[styles.lockSubtitle, { color: theme.tabIconDefault }]}>
+              This chat is locked. Authenticate to view messages.
+            </Text>
+            <TouchableOpacity 
+              style={[styles.unlockButton, { backgroundColor: theme.tint }]}
+              onPress={unlockChat}
+            >
+              <Ionicons name="finger-print" size={24} color="#fff" />
+              <Text style={styles.unlockButtonText}>Unlock with Biometrics</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
       <AppBar
         centerComponent={renderHeaderTitle()}
         isNative={true}
@@ -776,5 +916,84 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.15,
     shadowRadius: 20,
     zIndex: 1000,
+  },
+  reactionMenuRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  reactionMenuButton: {
+    paddingVertical: 6,
+    paddingHorizontal: 6,
+    borderRadius: 10,
+  },
+  reactionMenuEmoji: {
+    fontSize: 20,
+  },
+  reactionRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginTop: 6,
+  },
+  reactionChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    gap: 4,
+  },
+  reactionEmoji: {
+    fontSize: 14,
+  },
+  reactionCount: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  lockOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 1000,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  lockContent: {
+    alignItems: 'center',
+    padding: 32,
+    borderRadius: 16,
+  },
+  lockIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: 'rgba(128, 128, 128, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  lockTitle: {
+    fontSize: 24,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  lockSubtitle: {
+    fontSize: 15,
+    textAlign: 'center',
+    marginBottom: 32,
+  },
+  unlockButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+  },
+  unlockButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

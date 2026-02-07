@@ -64,23 +64,30 @@ export default function AIChatListScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: m3.background }} edges={['right', 'left', 'bottom']}>
       <Appbar.Header elevated={false} style={{ backgroundColor: m3.surface, elevation: 0 }}>
         <Appbar.Content title="AI" titleStyle={{ color: m3.onSurface }} />
+        <Appbar.Action 
+          icon="view-grid" 
+          onPress={() => router.push('/ai-spaces')} 
+          color={m3.onSurface}
+        />
       </Appbar.Header>
 
       <FlatList
         data={conversations}
         keyExtractor={item => item.id}
         renderItem={({ item }) => (
-          <ChatListElement
-            title={item.title}
-            subtitle={item.preview || 'No messages yet'}
-            time={new Date(item.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-            onPress={() => router.push({ pathname: '/ai-chat/[id]', params: { id: item.id, conversationId: item.id } })}
-            onDelete={() => handleDelete(item.id)}
-            onArchive={() => handleDelete(item.id)}
-            backgroundColor={m3.surface}
-            textColor={m3.onSurface}
-            subtitleColor={m3.onSurfaceVariant}
-          />
+          <View style={{ backgroundColor: m3.background }}>
+            <ChatListElement
+              title={item.title}
+              subtitle={item.preview || 'No messages yet'}
+              time={new Date(item.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              onPress={() => router.push({ pathname: '/ai-chat/[id]', params: { id: item.id, conversationId: item.id } })}
+              onDelete={() => handleDelete(item.id)}
+              onArchive={() => handleDelete(item.id)}
+              backgroundColor={m3.background}
+              textColor={m3.onSurface}
+              subtitleColor={m3.onSurfaceVariant}
+            />
+          </View>
         )}
         contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 16 }]}
         refreshControl={
@@ -104,7 +111,7 @@ export default function AIChatListScreen() {
 
       <FAB
         icon="plus"
-        style={[styles.fab, { bottom: insets.bottom + 16 }]}
+        style={[styles.fab, { bottom: insets.bottom + 80 }]}
         onPress={handleCreateNew}
         loading={creating}
       />
@@ -114,8 +121,7 @@ export default function AIChatListScreen() {
 
 const styles = StyleSheet.create({
   listContent: {
-    paddingBottom: 100,
-    paddingTop: 8,
+    paddingVertical: 0,
   },
   empty: {
     alignItems: 'center',
@@ -123,6 +129,8 @@ const styles = StyleSheet.create({
   },
   fab: {
     position: 'absolute',
-    right: 16,
+    right: 20,
+    borderRadius: 16,
+    elevation: 4,
   }
 });

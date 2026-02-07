@@ -1,11 +1,18 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, Dimensions, TouchableWithoutFeedback, Platform, StatusBar } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Dimensions, TouchableWithoutFeedback, Platform, StatusBar, Image } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { callService } from '@/services/call-service';
 import { useAuth } from '@/contexts/auth-context';
 import { useTheme } from '@/contexts/theme-context';
 import { useCall } from '@/contexts/call-context';
 import { CallBackground } from '@/components/call-background';
+import { Ionicons, MaterialIcons } from '@expo/vector-icons';
+import { Audio } from 'expo-av';
+import { BlurView } from 'expo-blur';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import Animated, { Easing, useSharedValue, useAnimatedStyle, withTiming, withSpring, runOnJS } from 'react-native-reanimated';
+import { interpolate } from 'react-native-reanimated';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const PIP_WIDTH = 110;
@@ -328,7 +335,6 @@ export default function CallScreen() {
   }, []);
 
   const handleAnswer = async () => {
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     setHasAnswered(true);
     setCallStatus('Connecting...');
     await callService.acceptCall(isVideoEnabled);
@@ -336,35 +342,30 @@ export default function CallScreen() {
   };
 
   const handleDecline = () => {
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     callService.endCall();
     if (router.canGoBack()) router.back();
     else router.replace('/(tabs)/chats');
   };
 
   const handleHangup = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     callService.endCall();
     if (router.canGoBack()) router.back();
     else router.replace('/(tabs)/chats');
   };
 
   const toggleMute = () => {
-    Haptics.selectionAsync();
     const nextMuted = !isMuted;
     setIsMuted(nextMuted);
     callService.toggleAudio(!nextMuted);
   };
 
   const toggleVideo = () => {
-    Haptics.selectionAsync();
     const nextVideo = !isVideoEnabled;
     setIsVideoEnabled(nextVideo);
     callService.toggleVideo(nextVideo);
   };
 
   const toggleSpeaker = async () => {
-    Haptics.selectionAsync();
     const nextSpeakerOn = !isSpeakerOn;
     setIsSpeakerOn(nextSpeakerOn);
     try {
@@ -381,7 +382,6 @@ export default function CallScreen() {
   };
 
   const swapVideoViews = () => {
-    Haptics.selectionAsync();
     setIsSwapped(!isSwapped);
   };
 

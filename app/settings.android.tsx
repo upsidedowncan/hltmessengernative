@@ -1,22 +1,28 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { StyleSheet, View, FlatList, Animated, Alert } from 'react-native';
+import { StyleSheet, View, FlatList, Animated, Alert, TouchableOpacity, ActivityIndicator, Image } from 'react-native';
 import * as LocalAuthentication from 'expo-local-authentication';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import { useMaterial3Theme } from '@pchmn/expo-material3-theme';
-import { useThemeMode, useTheme } from '@/contexts/theme-context';
+import { useTheme, useThemeMode } from '@/contexts/theme-context';
 import { useAuth } from '@/contexts/auth-context';
 import { supabase } from '@/services/supabase';
+import { useSendNotification } from '@/hooks/use-send-notification';
+import * as Notifications from 'expo-notifications';
+import { NotificationSetup } from '@/components/notification-setup';
 import {
   Appbar,
   Text as RNPText,
   Divider,
-  TouchableRipple,
   Avatar,
   Icon,
   Surface,
 } from 'react-native-paper';
+import { TouchableRipple } from '@/components/touchable-ripple';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useCustomBackground } from '@/contexts/custom-background-context';
+import { t } from '@/services/i18n';
 
 interface SettingsItem {
   id: string;
@@ -80,6 +86,8 @@ export default function SettingsScreen() {
   const { mode, setMode } = useThemeMode();
   const { signOut, profile, refreshProfile, user } = useAuth();
   const router = useRouter();
+  const { sendNotification } = useSendNotification();
+  const { backgroundUri, setBackgroundUri, clearBackground } = useCustomBackground();
 
   const { theme: m3Theme } = useMaterial3Theme();
   const m3 = m3Theme[isDarkMode ? 'dark' : 'light'];
@@ -89,6 +97,7 @@ export default function SettingsScreen() {
   const [isSaving, setIsSaving] = useState(false);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const firstLoad = useRef(true);
+  const [testNotificationLoading, setTestNotificationLoading] = useState(false);
 
   const [locationTracking, setLocationTracking] = useState(true);
   const [notifications, setNotifications] = useState(false);
@@ -96,6 +105,42 @@ export default function SettingsScreen() {
   const [systemTheme, setSystemTheme] = useState(mode === 'system');
   const [biometricEnabled, setBiometricEnabled] = useState(false);
   const [biometricAvailable, setBiometricAvailable] = useState(false);
+  const [pickingBackground, setPickingBackground] = useState(false);
+
+  const sendTestNotification = async () => {
+    if (!user) {
+      Alert.alert(t('settings.testNotificationAuthErrorTitle'), t('settings.testNotificationAuthErrorMessage'));
+      return;
+    }
+
+    setTestNotificationLoading(true);
+    try {
+      await sendNotification({
+        userId: user.id,
+        title: t('settings.testNotificationTitle'),
+        body: t('settings.testNotificationBody'),
+        screen: 'chats',
+        params: {},
+      });
+      
+      // Also show a local notification since push won't appear in foreground
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: t('settings.testNotificationLocalTitle'),
+          body: t('settings.testNotificationLocalBody'),
+          data: { screen: 'chats' },
+        },
+        trigger: null, // Show immediately
+      });
+      
+      Alert.alert(t('settings.testNotificationSuccessTitle'), t('settings.testNotificationSuccessMessage'));
+    } catch (error) {
+      console.error('Test notification failed:', error);
+      Alert.alert(t('settings.testNotificationErrorTitle'), t('settings.testNotificationErrorMessage'));
+    } finally {
+      setTestNotificationLoading(false);
+    }
+  };
 
   useEffect(() => {
     setDarkMode(mode === 'dark');
@@ -119,12 +164,12 @@ export default function SettingsScreen() {
 
   const toggleBiometric = async () => {
     if (!biometricAvailable) {
-      Alert.alert('Not Available', 'Biometric authentication is not available on this device.');
+      Alert.alert(t('settings.biometricNotAvailableTitle'), t('settings.biometricNotAvailableMessage'));
       return;
     }
 
     const result = await LocalAuthentication.authenticateAsync({
-      promptMessage: 'Authenticate to enable biometric login',
+      promptMessage: t('settings.biometricPrompt'),
     });
 
     if (result.success) {
@@ -132,6 +177,43 @@ export default function SettingsScreen() {
       setBiometricEnabled(newValue);
       await AsyncStorage.setItem('biometric_enabled', newValue.toString());
     }
+  };
+
+  const pickBackgroundImage = async () => {
+    setPickingBackground(true);
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        await setBackgroundUri(result.assets[0].uri);
+      }
+    } catch (error) {
+      console.error('Error picking background:', error);
+      Alert.alert(t('settings.imagePickerErrorTitle'), t('settings.imagePickerErrorMessage'));
+    } finally {
+      setPickingBackground(false);
+    }
+  };
+
+  const handleClearBackground = () => {
+    Alert.alert(
+      t('settings.removeBackgroundTitle'),
+      t('settings.removeBackgroundMessage'),
+      [
+        { text: t('settings.cancel'), style: 'cancel' },
+        {
+          text: t('settings.remove'),
+          style: 'destructive',
+          onPress: async () => {
+            await clearBackground();
+          },
+        },
+      ]
+    );
   };
 
   useEffect(() => {
@@ -175,30 +257,30 @@ export default function SettingsScreen() {
 
   const sections: SettingsSection[] = [
     {
-      title: 'Profile',
+      title: t('settings.profile'),
       items: [
         {
           id: 'fullname',
-          title: 'Display Name',
+          title: t('settings.displayName'),
           icon: 'account',
           rightElement: 'text',
-          rightText: isSaving ? 'Saving...' : '',
+          rightText: isSaving ? t('settings.saving') : '',
         },
         {
           id: 'username',
-          title: 'Username',
+          title: t('settings.username'),
           icon: 'at',
           rightElement: 'text',
-          rightText: isSaving ? 'Saving...' : '',
+          rightText: isSaving ? t('settings.saving') : '',
         },
       ],
     },
     {
-      title: 'Security',
+      title: t('settings.security'),
       items: [
         {
           id: 'biometric',
-          title: 'Fingerprint / Face',
+          title: t('settings.fingerprintFace'),
           icon: 'fingerprint',
           onPress: toggleBiometric,
           rightElement: 'switch',
@@ -206,28 +288,28 @@ export default function SettingsScreen() {
         },
         {
           id: 'location',
-          title: 'Location Security',
+          title: t('settings.locationSecurity'),
           icon: 'map-marker-radius-outline',
           onPress: () => { },
           rightElement: 'chevron',
         },
         {
           id: 'trusted',
-          title: 'Trusted Devices',
+          title: t('settings.trustedDevices'),
           icon: 'cellphone-link',
           onPress: () => { },
           rightElement: 'chevron',
         },
         {
           id: 'location-tracking',
-          title: 'Track Login Locations',
+          title: t('settings.trackLoginLocations'),
           icon: 'map-outline',
           rightElement: 'switch',
           switchValue: locationTracking,
         },
         {
           id: 'notifications',
-          title: 'Security Notifications',
+          title: t('settings.securityNotifications'),
           icon: 'bell-outline',
           rightElement: 'switch',
           switchValue: notifications,
@@ -235,37 +317,52 @@ export default function SettingsScreen() {
       ],
     },
     {
-      title: 'Appearance',
+      title: t('settings.appearance'),
       items: [
         {
           id: 'darkmode',
-          title: 'Dark Mode',
+          title: t('settings.darkMode'),
           icon: 'weather-night',
           rightElement: 'switch',
           switchValue: darkMode,
         },
         {
           id: 'system-theme',
-          title: 'Use System Theme',
+          title: t('settings.useSystemTheme'),
           icon: 'cellphone',
           rightElement: 'switch',
           switchValue: systemTheme,
         },
+        {
+          id: 'custom-background',
+          title: t('settings.customBackground'),
+          icon: 'image-outline',
+          onPress: pickBackgroundImage,
+          rightElement: 'chevron',
+        },
+        {
+          id: 'clear-background',
+          title: t('settings.removeBackground'),
+          icon: 'trash-can-outline',
+          onPress: handleClearBackground,
+          rightElement: 'chevron',
+          danger: true,
+        },
       ],
     },
     {
-      title: 'Developer',
+      title: t('settings.developer'),
       items: [
         {
           id: 'components',
-          title: 'Component Lab',
+          title: t('settings.componentLab'),
           icon: 'flask-outline',
           onPress: () => router.push('/component-test'),
           rightElement: 'chevron',
         },
         {
           id: 'dev-settings',
-          title: 'Developer Settings',
+          title: t('settings.developerSettings'),
           icon: 'code-tags',
           onPress: () => router.push('/dev-settings'),
           rightElement: 'chevron',
@@ -273,11 +370,11 @@ export default function SettingsScreen() {
       ],
     },
     {
-      title: 'Account',
+      title: t('settings.account'),
       items: [
         {
           id: 'signout',
-          title: 'Sign Out',
+          title: t('settings.signOut'),
           icon: 'logout',
           onPress: signOut,
           rightElement: 'text',
@@ -354,7 +451,11 @@ export default function SettingsScreen() {
                   )}
 
                   {item.rightElement === 'chevron' && (
-                    <Icon source="chevron-right" size={20} color={m3.onSurfaceVariant} />
+                    item.id === 'custom-background' && pickingBackground ? (
+                      <ActivityIndicator size="small" color={m3.primary} />
+                    ) : (
+                      <Icon source="chevron-right" size={20} color={m3.onSurfaceVariant} />
+                    )
                   )}
                 </View>
               </TouchableRipple>
@@ -370,7 +471,7 @@ export default function SettingsScreen() {
       <View style={{ flex: 1, backgroundColor: m3.background }}>
         <Appbar.Header elevated={false} style={{ backgroundColor: m3.surface, elevation: 0 }}>
           <Appbar.BackAction color={m3.onSurface} onPress={() => router.back()} />
-          <Appbar.Content title="Settings" titleStyle={{ color: m3.onSurface }} />
+          <Appbar.Content title={t('settings.title')} titleStyle={{ color: m3.onSurface }} />
         </Appbar.Header>
         <FlatList
           data={sections}
@@ -379,22 +480,57 @@ export default function SettingsScreen() {
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
           ListHeaderComponent={
-            <Surface style={[styles.avatarSection, { backgroundColor: m3.surfaceContainerHighest }]} elevation={1}>
-              <Avatar.Text
-                size={80}
-                label={fullName.charAt(0).toUpperCase() || 'U'}
-                style={{ backgroundColor: m3.primaryContainer }}
-                labelStyle={{ color: m3.onPrimaryContainer }}
-              />
-              <View style={{ marginLeft: 16, flex: 1, justifyContent: 'center' }}>
-                <RNPText variant="titleMedium" style={{ color: m3.onSurface, fontWeight: '600' }}>
-                  {fullName || 'User'}
+            <View>
+              <Surface style={[styles.avatarSection, { backgroundColor: m3.surfaceContainerHighest }]} elevation={1}>
+                <Avatar.Text
+                  size={80}
+                  label={fullName.charAt(0).toUpperCase() || 'U'}
+                  style={{ backgroundColor: m3.primaryContainer }}
+                  labelStyle={{ color: m3.onPrimaryContainer }}
+                />
+                <View style={{ marginLeft: 16, flex: 1, justifyContent: 'center' }}>
+                  <RNPText variant="titleMedium" style={{ color: m3.onSurface, fontWeight: '600' }}>
+                    {fullName || 'User'}
+                  </RNPText>
+                  <RNPText variant="bodyMedium" style={{ color: m3.onSurfaceVariant, marginTop: 4 }}>
+                    @{username}
+                  </RNPText>
+                </View>
+              </Surface>
+              
+              <View style={styles.notificationSection}>
+                <RNPText variant="labelMedium" style={[styles.sectionHeader, { color: m3.onSurfaceVariant }]}>
+                  {t('settings.notifications').toUpperCase()}
                 </RNPText>
-                <RNPText variant="bodyMedium" style={{ color: m3.onSurfaceVariant, marginTop: 4 }}>
-                  @{username}
-                </RNPText>
+                <Surface style={[styles.sectionContent, { backgroundColor: m3.surfaceContainerHighest }]} elevation={1}>
+                  <TouchableRipple
+                    onPress={sendTestNotification}
+                    style={styles.notificationItem}
+                    android_ripple={{ color: m3.onSurface + '20' }}>
+                    <View style={styles.itemContent}>
+                      <View style={[styles.iconContainer, { backgroundColor: m3.primaryContainer }]}>
+                        <Icon
+                          source="bell-check-outline"
+                          size={16}
+                          color={m3.primary}
+                        />
+                      </View>
+                      <RNPText variant="bodyMedium" style={{ color: m3.onSurface, flex: 1, fontWeight: '500' }}>
+                        {t('settings.testNotification')}
+                      </RNPText>
+                      {testNotificationLoading ? (
+                        <ActivityIndicator size="small" color={m3.primary} />
+                      ) : (
+                        <Icon source="chevron-right" size={20} color={m3.onSurfaceVariant} />
+                      )}
+                    </View>
+                  </TouchableRipple>
+                </Surface>
               </View>
-            </Surface>
+              
+              {/* Notification Setup - this registers push tokens */}
+              <NotificationSetup />
+            </View>
           }
           ListHeaderComponentStyle={styles.avatarHeaderStyle}
         />
@@ -455,5 +591,11 @@ const styles = StyleSheet.create({
   },
   textContainer: {
     flex: 1,
+  },
+  notificationSection: {
+    marginTop: 8,
+  },
+  notificationItem: {
+    minHeight: 48,
   },
 });

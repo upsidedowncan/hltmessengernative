@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "HLT",
-    "slug": "hlt",
-    "scheme": "hlt",
+    "name": "Swift",
+    "slug": "swift-messenger",
+    "scheme": "swift",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/logo_combined.png",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
@@ -49,8 +49,8 @@
       "package": "com.hlt.messenger",
       "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "foregroundImage": "./assets/logo_subject_transparent.png",
+        "backgroundColor": "#82CDFF"
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,

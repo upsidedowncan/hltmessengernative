@@ -18,6 +18,7 @@ import {
   ScrollView,
   RefreshControl,
   TouchableOpacity,
+  Alert,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useNavigation } from '@react-navigation/native';
@@ -29,16 +30,19 @@ import Animated, {
   withSpring,
   withTiming,
   runOnJS,
+  interpolate,
 } from 'react-native-reanimated';
-import { Ionicons } from '@expo/vector-icons';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
 import Markdown from 'react-native-markdown-display';
 import { WebView } from 'react-native-webview';
 import { Audio } from 'expo-av';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as LocalAuthentication from 'expo-local-authentication';
 import { useMaterial3Theme } from '@pchmn/expo-material3-theme';
-import { Appbar, IconButton, Text as RNPText, Card, Divider, TouchableRipple, ActivityIndicator as RNPActivityIndicator, FAB, Surface, Portal, Dialog, Button, ProgressBar } from 'react-native-paper';
+import { Appbar, IconButton, Text as RNPText, Card, Divider, ActivityIndicator as RNPActivityIndicator, FAB, Surface, Portal, Dialog, Button, ProgressBar } from 'react-native-paper';
+import { TouchableRipple } from '@/components/touchable-ripple';
 
 import { supabase } from '@/services/supabase';
 import { useAuth } from '@/contexts/auth-context';
@@ -48,10 +52,6 @@ import { DeepLinkUserWidget } from '@/components/deep-link-user-widget.android';
 import { Colors } from '@/constants/colors';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-
-if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
-  UIManager.setLayoutAnimationEnabledExperimental(true);
-}
 
 type MainStackParamList = {
   AIChat: undefined;
@@ -65,6 +65,8 @@ type Attachment = {
   duration?: number;
 };
 
+type Reactions = Record<string, string[]>;
+
 type Message = {
   id: string;
   content: string;
@@ -74,7 +76,10 @@ type Message = {
   read_at: string | null;
   attachments: Attachment[];
   is_edited: boolean;
+  reactions?: Reactions | null;
 };
+
+const REACTION_EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '👏', '🔥', '💯', '🙏', '✅'];
 
 export default function SingleChatScreen() {
   const router = useRouter();
@@ -97,6 +102,9 @@ export default function SingleChatScreen() {
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [sending, setSending] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'disconnected'>('connecting');
+  const [isChatLocked, setIsChatLocked] = useState(false);
+  const [biometricAvailable, setBiometricAvailable] = useState(false);
+  const [showLockOverlay, setShowLockOverlay] = useState(false);
 
   const flatListRef = useRef<FlatList>(null);
   const CACHE_KEY = `chat_${user?.id}_${friendId}`;
@@ -138,10 +146,10 @@ export default function SingleChatScreen() {
   const openMenu = (message: Message, x: number, y: number) => {
     const screenWidth = Dimensions.get('window').width;
     const menuWidth = 220;
-    
+
     const isLeft = x < screenWidth / 2;
     setMenuOnLeft(isLeft);
-    
+
     setMenuAnchor({
       x: isLeft ? Math.max(16, x - 16) : Math.min(screenWidth - menuWidth + 16, x - menuWidth + 16),
       y: Math.min(y - 8, Dimensions.get('window').height - 100 - 50)
@@ -152,7 +160,34 @@ export default function SingleChatScreen() {
     menuOpacity.value = withTiming(1, { duration: 120 });
   };
 
+  const unlockChat = async () => {
+    if (!biometricAvailable) {
+      Alert.alert('Not Available', 'Biometric authentication is not available on this device.');
+      return;
+    }
+
+    const result = await LocalAuthentication.authenticateAsync({
+      promptMessage: 'Authenticate to unlock this chat',
+    });
+
+    if (result.success) {
+      setShowLockOverlay(false);
+    }
+  };
+
   useEffect(() => {
+    const checkBiometricAndLock = async () => {
+      const compatible = await LocalAuthentication.hasHardwareAsync();
+      setBiometricAvailable(compatible);
+
+      const locked = await AsyncStorage.getItem(`locked_chat_${friendId}`);
+      if (locked === 'true') {
+        setIsChatLocked(true);
+        setShowLockOverlay(true);
+      }
+    };
+    checkBiometricAndLock();
+
     loadCachedMessages();
     fetchMessages(0);
     subscribeToMessages();
@@ -333,7 +368,8 @@ export default function SingleChatScreen() {
       attachments: attachments,
       created_at: new Date().toISOString(),
       read_at: null,
-      is_edited: false
+      is_edited: false,
+      reactions: {}
     };
 
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -356,7 +392,7 @@ export default function SingleChatScreen() {
         body: optimisticMsg.content || 'Sent an attachment',
         screen: 'SingleChat',
         params: { friendId: user.id, friendName: profile?.full_name || 'Friend' }
-      }).catch(err => console.error('Notification failed', err));
+      }).catch((err: any) => console.error('Notification failed', err));
 
     } catch (error: any) {
       setMessages(prev => prev.filter(m => m.id !== optimisticMsg.id));
@@ -387,6 +423,43 @@ export default function SingleChatScreen() {
     }
   };
 
+  const updateMessageReactions = (messageId: string, reactions: Reactions) => {
+    setMessages(prev => prev.map(m => (m.id === messageId ? { ...m, reactions } : m)));
+  };
+
+  const toggleReaction = async (message: Message, emoji: string) => {
+    if (!user || message.id.startsWith('opt_')) return;
+
+    const existing = (message.reactions || {}) as Reactions;
+    const current = new Set(existing[emoji] || []);
+    const hasReacted = current.has(user.id);
+
+    if (hasReacted) {
+      current.delete(user.id);
+    } else {
+      current.add(user.id);
+    }
+
+    const updated: Reactions = { ...existing };
+    if (current.size === 0) {
+      delete updated[emoji];
+    } else {
+      updated[emoji] = Array.from(current);
+    }
+
+    updateMessageReactions(message.id, updated);
+
+    try {
+      const { error } = await supabase
+        .from('messages')
+        .update({ reactions: updated })
+        .eq('id', message.id);
+      if (error) throw error;
+    } catch (error) {
+      updateMessageReactions(message.id, existing);
+    }
+  };
+
   const MessageContextMenu = () => {
     const isMyMessage = selectedMessage?.sender_id === user?.id;
     const isLeft = menuOnLeft;
@@ -398,24 +471,95 @@ export default function SingleChatScreen() {
       opacity: menuOpacity.value,
     }));
 
+    const reactionBarStyle = useAnimatedStyle(() => {
+      const progress = menuAnimation.value;
+      return {
+        opacity: progress,
+        transform: [
+          { translateY: -10 + (1 - progress) * 10 },
+          { scale: 0.92 + 0.08 * progress },
+        ],
+      };
+    });
+
+    const ReactionButton = ({ emoji, index }: { emoji: string; index: number }) => {
+      const itemStyle = useAnimatedStyle(() => {
+        const delay = index * 0.05;
+        const t = Math.max(0, Math.min(1, menuAnimation.value * 1.2 - delay));
+        return {
+          opacity: t,
+          transform: [
+            { translateY: interpolate(t, [0, 1], [12, 0]) },
+            { scale: interpolate(t, [0, 1], [0.5, 1]) },
+          ],
+        };
+      }, [index]);
+
+      return (
+        <Animated.View style={itemStyle}>
+          <Pressable
+            style={styles.reactionMenuButton}
+            onPress={() => {
+              if (selectedMessage) {
+                toggleReaction(selectedMessage, emoji);
+              }
+              closeMenu();
+            }
+          }
+          >
+            <RNPText style={styles.reactionMenuEmoji}>{emoji}</RNPText>
+          </Pressable>
+        </Animated.View>
+      );
+    };
+
     const backdropStyle = useAnimatedStyle(() => ({
-      opacity: menuAnimation.value * 0.4,
+      opacity: menuAnimation.value * 0.3,
     }));
 
     if (menuAnimation.value === 0 || !selectedMessage) return null;
 
     return (
       <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
-        <Animated.View 
-          style={[StyleSheet.absoluteFill, { backgroundColor: '#000', position: 'absolute' }, backdropStyle]} 
-          pointerEvents="auto"
+        <Animated.View
+          style={[StyleSheet.absoluteFill, { backgroundColor: '#000', position: 'absolute' }, backdropStyle]}
+          pointerEvents="none"
+        />
+        <View
+          style={StyleSheet.absoluteFill}
+          onStartShouldSetResponder={() => {
+            if (menuAnimation.value > 0) {
+              closeMenu();
+            }
+            return false;
+          }}
+        />
+        <Animated.View
+          style={[
+            styles.reactionBar,
+            reactionBarStyle,
+            {
+              backgroundColor: m3.surface,
+              position: 'absolute',
+              left: menuAnchor.x,
+              top: menuAnchor.y - 40,
+              width: 220,
+            },
+          ]}
         >
-          <TouchableOpacity 
-            style={{ flex: 1 }} 
-            activeOpacity={1}
-            onPress={closeMenu}
-          />
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.reactionMenuRow}
+            bounces={true}
+            overScrollMode="always"
+          >
+            {REACTION_EMOJIS.map((emoji, index) => (
+              <ReactionButton key={`react-${emoji}`} emoji={emoji} index={index} />
+            ))}
+          </ScrollView>
         </Animated.View>
+
         <Animated.View style={[
           styles.customMenu,
           animatedStyle,
@@ -423,7 +567,7 @@ export default function SingleChatScreen() {
             backgroundColor: m3.surface,
             position: 'absolute',
             left: menuAnchor.x,
-            top: menuAnchor.y,
+            top: menuAnchor.y + 2,
             width: 220,
           }
         ]}>
@@ -433,10 +577,10 @@ export default function SingleChatScreen() {
           >
             <View style={styles.menuItemContent}>
               <RNPText variant="bodyLarge" style={{ color: m3.onSurface }}>Copy</RNPText>
-              <Ionicons name="copy" size={22} color={m3.onSurface} />
+              <MaterialCommunityIcons name="content-copy" size={22} color={m3.onSurface} />
             </View>
           </TouchableRipple>
-          
+
           {isMyMessage && (
             <>
               <Divider style={{ backgroundColor: m3.outline }} />
@@ -446,7 +590,7 @@ export default function SingleChatScreen() {
               >
                 <View style={styles.menuItemContent}>
                   <RNPText variant="bodyLarge" style={{ color: m3.error }}>Delete</RNPText>
-                  <Ionicons name="trash" size={22} color={m3.error} />
+                  <MaterialCommunityIcons name="delete" size={22} color={m3.error} />
                 </View>
               </TouchableRipple>
             </>
@@ -474,12 +618,65 @@ export default function SingleChatScreen() {
 
   const headerHeight = (Platform.OS === 'ios' ? 64 : 56) + insets.top;
 
+  // Lock overlay - render as early return to cover everything
+  if (isChatLocked && showLockOverlay) {
+    return (
+      <View style={[styles.container, { backgroundColor: m3.background }]}>
+        <Appbar.Header elevated={false} style={{ backgroundColor: m3.surface, elevation: 0 }}>
+          <Appbar.BackAction onPress={() => router.back()} />
+          <Appbar.Content title={renderHeaderTitle()} />
+          <Appbar.Action
+            icon="information"
+            onPress={() => {
+              router.push({
+                pathname: '/chat-info',
+                params: { friendId, friendName, friendAvatar: friendAvatar || '' }
+              });
+            }}
+            color={m3.onSurface}
+          />
+          <Appbar.Action icon="dots-vertical" onPress={() => { }} color={m3.onSurface} />
+        </Appbar.Header>
+        <View style={styles.lockOverlay}>
+          <View style={[styles.lockContent, { backgroundColor: m3.surface }]}>
+            <View style={styles.lockIconContainer}>
+              <MaterialCommunityIcons name="lock" size={48} color={m3.primary} />
+            </View>
+            <RNPText variant="headlineSmall" style={[styles.lockTitle, { color: m3.onSurface }]}>Chat Locked</RNPText>
+            <RNPText variant="bodyMedium" style={[styles.lockSubtitle, { color: m3.onSurfaceVariant }]}>
+              This chat is locked. Authenticate to view messages.
+            </RNPText>
+            <TouchableRipple
+              style={[styles.unlockButton, { backgroundColor: m3.primary }]}
+              onPress={unlockChat}
+            >
+              <View style={styles.unlockButtonContent}>
+                <MaterialCommunityIcons name="fingerprint" size={24} color="#fff" />
+                <RNPText variant="bodyLarge" style={styles.unlockButtonText}>Unlock with Biometrics</RNPText>
+              </View>
+            </TouchableRipple>
+          </View>
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View style={[styles.container, { backgroundColor: m3.background }]}>
       <Appbar.Header elevated={false} style={{ backgroundColor: m3.surface, elevation: 0 }}>
         <Appbar.BackAction onPress={() => router.back()} />
         <Appbar.Content title={renderHeaderTitle()} />
-        <Appbar.Action icon="dots-vertical" onPress={() => {}} color={m3.onSurface} />
+        <Appbar.Action
+          icon="information"
+          onPress={() => {
+            router.push({
+              pathname: '/chat-info',
+              params: { friendId, friendName, friendAvatar: friendAvatar || '' }
+            });
+          }}
+          color={m3.onSurface}
+        />
+        <Appbar.Action icon="dots-vertical" onPress={() => { }} color={m3.onSurface} />
       </Appbar.Header>
 
       <KeyboardAvoidingView
@@ -499,36 +696,34 @@ export default function SingleChatScreen() {
             const TIME_THRESHOLD = 60 * 1000;
             const isWithinTime = newerMessage && (new Date(newerMessage.created_at).getTime() - new Date(item.created_at).getTime() < TIME_THRESHOLD);
             const isLastInGroup = !isSameSender || !isWithinTime;
+            const reactionEntries = (Object.entries(item.reactions || {}) as Array<[string, string[]]>).filter(([, users]) => users.length > 0);
 
             const renderContent = (content: string) => {
-              const regex = /(?:^|\s)hlt:\/\/chat\?username=([a-zA-Z0-9_]+)(?:$|\s)/g;
+              const regex = /(?:^|\s)swift:\/\/chat\?username=([a-zA-Z0-9_]+)(?:$|\s)/g;
               const parts = [];
               let lastIndex = 0;
               let match;
 
               while ((match = regex.exec(content)) !== null) {
-                // Add text before the match
                 if (match.index > lastIndex) {
-                   // We render the Markdown component for regular text
-                   parts.push(
-                     <View key={`text-${lastIndex}`}>
-                       <Markdown
-                          style={{
-                             body: {
-                               color: isMe ? m3.onPrimaryContainer : m3.onSurface,
-                               fontSize: 15,
-                               marginVertical: 0,
-                               paddingVertical: 0,
-                               lineHeight: 18,
-                             },
-                          }}
-                        >
-                          {content.substring(lastIndex, match.index)}
-                        </Markdown>
-                     </View>
-                   );
+                  parts.push(
+                    <View key={`text-${lastIndex}`}>
+                      <Markdown
+                        style={{
+                          body: {
+                            color: isMe ? m3.onPrimaryContainer : m3.onSurface,
+                            fontSize: 15,
+                            marginVertical: 0,
+                            paddingVertical: 0,
+                            lineHeight: 18,
+                          },
+                        }}
+                      >
+                        {content.substring(lastIndex, match.index)}
+                      </Markdown>
+                    </View>
+                  );
                 }
-                // Add the widget
                 parts.push(
                   <View key={`widget-${match.index}`} style={{ marginVertical: 4 }}>
                     <DeepLinkUserWidget username={match[1]} />
@@ -537,69 +732,68 @@ export default function SingleChatScreen() {
                 lastIndex = regex.lastIndex;
               }
 
-              // Add remaining text
               if (lastIndex < content.length) {
                 parts.push(
-                   <View key={`text-${lastIndex}`}>
-                       <Markdown
-                          style={{
-                            body: {
-                              color: isMe ? m3.onPrimaryContainer : m3.onSurface,
-                              fontSize: 15,
-                              marginVertical: 0,
-                            },
-                          }}
-                        >
-                          {content.substring(lastIndex)}
-                        </Markdown>
-                   </View>
+                  <View key={`text-${lastIndex}`}>
+                    <Markdown
+                      style={{
+                        body: {
+                          color: isMe ? m3.onPrimaryContainer : m3.onSurface,
+                          fontSize: 15,
+                          marginVertical: 0,
+                        },
+                      }}
+                    >
+                      {content.substring(lastIndex)}
+                    </Markdown>
+                  </View>
                 );
               }
 
               if (parts.length === 0) {
-                 return (
-                        <Markdown
-                          style={{
-                            body: {
-                              color: isMe ? m3.onPrimaryContainer : m3.onSurface,
-                              fontSize: 15,
-                              marginVertical: 0,
-                              paddingVertical: 0,
-                            },
-                            paragraph: { marginVertical: 0, paddingVertical: 0, lineHeight: 18 },
-                            link: {
-                              color: isMe ? m3.onPrimaryContainer : m3.primary,
-                            },
-                            strong: {
-                              fontWeight: 'bold',
-                            },
-                            em: {
-                              fontStyle: 'italic',
-                            },
-                            code: {
-                              backgroundColor: isMe ? 'rgba(0,0,0,0.1)' : 'rgba(0,0,0,0.05)',
-                              paddingHorizontal: 4,
-                              paddingVertical: 2,
-                              borderRadius: 4,
-                              fontFamily: 'monospace',
-                            },
-                            pre: {
-                              backgroundColor: isMe ? 'rgba(0,0,0,0.1)' : 'rgba(0,0,0,0.05)',
-                              padding: 8,
-                              borderRadius: 8,
-                            },
-                            blockquote: {
-                              borderLeftWidth: 3,
-                              borderLeftColor: m3.primary,
-                              paddingLeft: 8,
-                              marginLeft: 0,
-                              color: isMe ? m3.onPrimaryContainer : m3.onSurfaceVariant,
-                            },
-                          }}
-                        >
-                        {content}
-                      </Markdown>
-                 );
+                return (
+                  <Markdown
+                    style={{
+                      body: {
+                        color: isMe ? m3.onPrimaryContainer : m3.onSurface,
+                        fontSize: 15,
+                        marginVertical: 0,
+                        paddingVertical: 0,
+                      },
+                      paragraph: { marginVertical: 0, paddingVertical: 0, lineHeight: 18 },
+                      link: {
+                        color: isMe ? m3.onPrimaryContainer : m3.primary,
+                      },
+                      strong: {
+                        fontWeight: 'bold',
+                      },
+                      em: {
+                        fontStyle: 'italic',
+                      },
+                      code: {
+                        backgroundColor: isMe ? 'rgba(0,0,0,0.1)' : 'rgba(0,0,0,0.05)',
+                        paddingHorizontal: 4,
+                        paddingVertical: 2,
+                        borderRadius: 4,
+                        fontFamily: 'monospace',
+                      },
+                      pre: {
+                        backgroundColor: isMe ? 'rgba(0,0,0,0.1)' : 'rgba(0,0,0,0.05)',
+                        padding: 8,
+                        borderRadius: 8,
+                      },
+                      blockquote: {
+                        borderLeftWidth: 3,
+                        borderLeftColor: m3.primary,
+                        paddingLeft: 8,
+                        marginLeft: 0,
+                        color: isMe ? m3.onPrimaryContainer : m3.onSurfaceVariant,
+                      },
+                    }}
+                  >
+                    {content}
+                  </Markdown>
+                );
               }
 
               return <View>{parts}</View>;
@@ -607,10 +801,11 @@ export default function SingleChatScreen() {
 
             return (
               <View style={{ marginBottom: isLastInGroup ? 12 : 2 }}>
-                <TouchableRipple
-                  onLongPress={(e) => handleLongPress(e, item)}
-                  style={{ flexDirection: 'row', justifyContent: isMe ? 'flex-end' : 'flex-start' }}
-                >
+                <View style={{ flexDirection: 'row', justifyContent: isMe ? 'flex-end' : 'flex-start' }}>
+                  <TouchableRipple
+                    onLongPress={(e) => handleLongPress(e, item)}
+                    style={{ maxWidth: '75%', borderRadius: 16, overflow: 'hidden' }}
+                  >
                     <Surface
                       style={[
                         styles.bubble,
@@ -620,26 +815,44 @@ export default function SingleChatScreen() {
                           borderTopRightRadius: isMe && !isLastInGroup ? 4 : 16,
                           borderBottomLeftRadius: !isMe ? 4 : 16,
                           borderBottomRightRadius: isMe ? 4 : 16,
-                          maxWidth: '75%'
+                          maxWidth: '100%'
                         }
                       ]}
                       elevation={0}
                     >
-                    {item.attachments?.length > 0 && (
-                      <View style={styles.attachmentContainer}>
-                        {item.attachments.map((att: Attachment, idx: number) => (
-                          <View key={idx} style={[styles.fileAttachment, { backgroundColor: isMe ? m3.primaryContainer : m3.surfaceContainer }]}>
-                            <Ionicons name="document-text" size={24} color={isMe ? '#fff' : m3.onSurface} />
-                            <RNPText variant="bodyMedium" style={{ color: isMe ? m3.onPrimaryContainer : m3.onSurface }} numberOfLines={1}>
-                              {att.name || 'File'}
-                            </RNPText>
-                          </View>
-                        ))}
+                      {item.attachments?.length > 0 && (
+                        <View style={styles.attachmentContainer}>
+                          {item.attachments.map((att: Attachment, idx: number) => (
+                            <View key={idx} style={[styles.fileAttachment, { backgroundColor: isMe ? m3.primaryContainer : m3.surfaceContainer }]}>
+                              <MaterialCommunityIcons name="file-document" size={24} color={isMe ? '#fff' : m3.onSurface} />
+                              <RNPText variant="bodyMedium" style={{ color: isMe ? m3.onPrimaryContainer : m3.onSurface }} numberOfLines={1}>
+                                {att.name || 'File'}
+                              </RNPText>
+                            </View>
+                          ))}
+                        </View>
+                      )}
+                      {!!item.content && renderContent(item.content)}
+                    </Surface>
+                  </TouchableRipple>
+                </View>
+
+                {reactionEntries.length > 0 && (
+                  <View style={[styles.reactionRow, { justifyContent: isMe ? 'flex-end' : 'flex-start' }]}>
+                    {reactionEntries.map(([emoji, users]) => (
+                      <View
+                        key={`${item.id}-${emoji}`}
+                        style={[
+                          styles.reactionChip,
+                          { backgroundColor: isMe ? m3.primaryContainer : m3.surfaceContainer }
+                        ]}
+                      >
+                        <RNPText style={[styles.reactionEmoji, { color: isMe ? m3.onPrimaryContainer : m3.onSurface }]}>{emoji}</RNPText>
+                        <RNPText style={[styles.reactionCount, { color: isMe ? m3.onPrimaryContainer : m3.onSurface }]}>{users.length}</RNPText>
                       </View>
-                    )}
-                    {!!item.content && renderContent(item.content)}
-                  </Surface>
-                </TouchableRipple>
+                    ))}
+                  </View>
+                )}
 
                 {isLastInGroup && (
                   <View style={[styles.metadataContainer, { justifyContent: isMe ? 'flex-end' : 'flex-start', marginRight: isMe ? 10 : 0 }]}>
@@ -647,8 +860,8 @@ export default function SingleChatScreen() {
                       {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </RNPText>
                     {isMe && (
-                      <Ionicons
-                        name={item.read_at ? "checkmark-done" : "checkmark"}
+                      <MaterialCommunityIcons
+                        name={item.read_at ? "check-all" : "check"}
                         size={14}
                         color={item.read_at ? m3.primary : m3.onSurfaceVariant}
                         style={{ marginLeft: 4 }}
@@ -675,6 +888,12 @@ export default function SingleChatScreen() {
             }
           }}
           onEndReachedThreshold={0.5}
+          onScroll={() => {
+            if (menuAnimation.value > 0) {
+              closeMenu();
+            }
+          }}
+          scrollEventThrottle={16}
         />
 
         <SafeAreaView edges={["bottom"]}>
@@ -688,7 +907,7 @@ export default function SingleChatScreen() {
                 {attachments.map((att, i) => (
                   <View key={i} style={styles.previewItem}>
                     <View style={[styles.filePreview, { borderColor: m3.outline }]}>
-                      <Ionicons name="document" size={24} color={m3.onSurface} />
+                      <MaterialCommunityIcons name="file-document" size={24} color={m3.onSurface} />
                     </View>
                     <IconButton
                       icon="close"
@@ -733,7 +952,7 @@ export default function SingleChatScreen() {
                     icon="camera"
                     size={20}
                     iconColor={m3.onSurfaceVariant}
-                    onPress={() => {}}
+                    onPress={() => { }}
                     style={styles.internalIcon}
                   />
                 </View>
@@ -746,7 +965,7 @@ export default function SingleChatScreen() {
                     {sending ? (
                       <RNPActivityIndicator size="small" color="#fff" />
                     ) : (
-                      <Ionicons name={inputText.trim().length > 0 ? 'send' : 'mic'} size={20} color="#fff" />
+                      <MaterialCommunityIcons name={inputText.trim().length > 0 ? 'send' : 'microphone'} size={20} color="#fff" />
                     )}
                   </View>
                 </TouchableRipple>
@@ -895,14 +1114,109 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     zIndex: 1000,
   },
+  reactionBar: {
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 0,
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    zIndex: 1001,
+    overflow: 'hidden',
+  },
   menuItem: {
-    paddingVertical: 4,
+    paddingVertical: 0,
   },
   menuItemContent: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 6,
+  },
+  reactionMenuRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+    paddingVertical: 0,
+    gap: 2,
+  },
+  reactionMenuButton: {
+    paddingVertical: 4,
+    paddingHorizontal: 4,
+    borderRadius: 8,
+  },
+  reactionMenuEmoji: {
+    fontSize: 20,
+  },
+  reactionRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginTop: 6,
+  },
+  reactionChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    gap: 4,
+  },
+  reactionEmoji: {
+    fontSize: 14,
+  },
+  reactionCount: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  lockOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  lockContent: {
+    alignItems: 'center',
+    padding: 32,
+    borderRadius: 16,
+  },
+  lockIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: 'rgba(128, 128, 128, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  lockTitle: {
+    fontSize: 24,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  lockSubtitle: {
+    fontSize: 15,
+    textAlign: 'center',
+    marginBottom: 32,
+  },
+  unlockButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+  },
+  unlockButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  unlockButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

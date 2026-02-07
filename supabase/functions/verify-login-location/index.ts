@@ -142,7 +142,7 @@ serve(async (req: Request): Promise<Response> => {
       const geoRes = await fetch(`https://get.geojs.io/v1/ip/geo/${loginContext.ip_address}.json`, {
         headers: {
           'Accept': 'application/json',
-          'User-Agent': 'HLT-Messenger-Security/1.0'
+          'User-Agent': 'Swift-Messenger-Security/1.0'
         }
       });
 

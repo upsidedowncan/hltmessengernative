@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { StyleSheet, Text, View, Alert } from 'react-native';
+import { StyleSheet, Text, View, Alert, ActivityIndicator } from 'react-native';
 import * as LocalAuthentication from 'expo-local-authentication';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import { useTheme, ThemeMode } from '@/contexts/theme-context';
 import { Button } from '@/components/button';
@@ -12,11 +13,14 @@ import { useAuth } from '@/contexts/auth-context';
 import { NotificationSetup } from '@/components/notification-setup';
 import { supabase } from '@/services/supabase';
 import { Switch, Host, List } from '@expo/ui/swift-ui';
+import { useCustomBackground } from '@/contexts/custom-background-context';
+import { t } from '@/services/i18n';
 
 export default function SettingsScreen() {
   const { theme, themeMode, setThemeMode } = useTheme();
   const { signOut, profile, refreshProfile, user } = useAuth();
   const router = useRouter();
+  const { backgroundUri, setBackgroundUri, clearBackground } = useCustomBackground();
 
   const [username, setUsername] = useState('');
   const [fullName, setFullName] = useState('');
@@ -25,6 +29,7 @@ export default function SettingsScreen() {
   const [biometricAvailable, setBiometricAvailable] = useState(false);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const firstLoad = useRef(true);
+  const [pickingBackground, setPickingBackground] = useState(false);
 
   useEffect(() => {
     const checkBiometric = async () => {
@@ -43,12 +48,12 @@ export default function SettingsScreen() {
 
   const toggleBiometric = async () => {
     if (!biometricAvailable) {
-      Alert.alert('Not Available', 'Biometric authentication is not available on this device.');
+      Alert.alert(t('settings.biometricNotAvailableTitle'), t('settings.biometricNotAvailableMessage'));
       return;
     }
 
     const result = await LocalAuthentication.authenticateAsync({
-      promptMessage: 'Authenticate to enable biometric login',
+      promptMessage: t('settings.biometricPrompt'),
     });
 
     if (result.success) {
@@ -56,6 +61,43 @@ export default function SettingsScreen() {
       setBiometricEnabled(newValue);
       await AsyncStorage.setItem('biometric_enabled', newValue.toString());
     }
+  };
+
+  const pickBackgroundImage = async () => {
+    setPickingBackground(true);
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        await setBackgroundUri(result.assets[0].uri);
+      }
+    } catch (error) {
+      console.error('Error picking background:', error);
+      Alert.alert(t('settings.imagePickerErrorTitle'), t('settings.imagePickerErrorMessage'));
+    } finally {
+      setPickingBackground(false);
+    }
+  };
+
+  const handleClearBackground = () => {
+    Alert.alert(
+      t('settings.removeBackgroundTitle'),
+      t('settings.removeBackgroundMessage'),
+      [
+        { text: t('settings.cancel'), style: 'cancel' },
+        {
+          text: t('settings.remove'),
+          style: 'destructive',
+          onPress: async () => {
+            await clearBackground();
+          },
+        },
+      ]
+    );
   };
 
   useEffect(() => {
@@ -109,7 +151,7 @@ export default function SettingsScreen() {
 
   return (
     <Host style={{ flex: 1 }}>
-      <AppBar title="Settings" isNative={true} largeTitle={true} />
+      <AppBar title={t('settings.title')} isNative={true} largeTitle={true} />
       <List
         style={{ flex: 1 }}
         listStyle='insetGrouped'
@@ -123,16 +165,16 @@ export default function SettingsScreen() {
         />
 
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: theme.text }]}>General</Text>
+          <Text style={[styles.sectionTitle, { color: theme.text }]}>{t('settings.general')}</Text>
           <View style={styles.groupContainer}>
             <Tile
-              title="Notifications"
+              title={t('settings.notifications')}
               icon="notifications-outline"
               onPress={() => {}}
               groupPosition="top"
             />
             <Tile
-              title="Dark Mode"
+              title={t('settings.darkMode')}
               icon="moon-outline"
               onPress={() => setThemeMode(themeMode === 'dark' ? 'light' : 'dark')}
               groupPosition="middle"
@@ -148,7 +190,7 @@ export default function SettingsScreen() {
               }
             />
             <Tile
-              title="Use System Theme"
+              title={t('settings.useSystemTheme')}
               icon="phone-portrait-outline"
               onPress={() => setThemeMode(themeMode === 'system' ? 'light' : 'system')}
               groupPosition="bottom"
@@ -171,10 +213,30 @@ export default function SettingsScreen() {
         </View>
 
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: theme.text }]}>Security</Text>
+          <Text style={[styles.sectionTitle, { color: theme.text }]}>{t('settings.appearance')}</Text>
           <View style={styles.groupContainer}>
             <Tile
-              title="Face ID / Touch ID"
+              title={t('settings.customBackground')}
+              icon="image-outline"
+              onPress={pickBackgroundImage}
+              groupPosition="top"
+              rightElement={pickingBackground ? <ActivityIndicator size="small" color={theme.tint} /> : undefined}
+            />
+            <Tile
+              title={t('settings.removeBackground')}
+              icon="trash-bin-outline"
+              onPress={handleClearBackground}
+              groupPosition="bottom"
+              chevron={true}
+            />
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: theme.text }]}>{t('settings.security')}</Text>
+          <View style={styles.groupContainer}>
+            <Tile
+              title={t('settings.faceId')}
               icon="finger-print-outline"
               onPress={toggleBiometric}
               groupPosition="top"
@@ -191,13 +253,13 @@ export default function SettingsScreen() {
               chevron={false}
             />
             <Tile
-              title="Location Security"
+              title={t('settings.locationSecurity')}
               icon="location-outline"
               onPress={() => {}}
               groupPosition="middle"
             />
             <Tile
-              title="Trusted Devices"
+              title={t('settings.trustedDevices')}
               icon="phone-portrait-outline"
               onPress={() => {}}
               groupPosition="bottom"
@@ -206,16 +268,16 @@ export default function SettingsScreen() {
         </View>
 
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: theme.text }]}>Developer</Text>
+          <Text style={[styles.sectionTitle, { color: theme.text }]}>{t('settings.developer')}</Text>
           <View style={styles.groupContainer}>
             <Tile
-              title="Component Lab"
+              title={t('settings.componentLab')}
               icon="beaker-outline"
               onPress={() => router.push('/component-test')}
               groupPosition="top"
             />
             <Tile
-              title="Developer Settings"
+              title={t('settings.developerSettings')}
               icon="code-slash-outline"
               onPress={() => router.push('/dev-settings')}
               groupPosition="bottom"
@@ -226,7 +288,7 @@ export default function SettingsScreen() {
         <View style={styles.section}>
           <View style={{ paddingHorizontal: 24 }}>
             <Button
-              title="Sign Out"
+              title={t('settings.signOut')}
               onPress={signOut}
               type="outline"
               color="#ef5350"

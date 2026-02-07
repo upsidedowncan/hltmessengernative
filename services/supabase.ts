@@ -14,3 +14,6 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     detectSessionInUrl: false,
   },
 });
+
+// Export URL and key for use in other services
+export { supabaseUrl, supabaseAnonKey };

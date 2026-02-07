@@ -1,0 +1,100 @@
+{
+  "app": {
+    "name": "Swift"
+  },
+  "common": {
+    "error": "Error"
+  },
+  "auth": {
+    "login": {
+      "title": "Welcome Back",
+      "subtitle": "Log in to Swift to connect with your friends.",
+      "emailLabel": "Email",
+      "passwordLabel": "Password",
+      "emailPlaceholder": "name@example.com",
+      "passwordPlaceholder": "Enter your password",
+      "button": "Log In",
+      "loading": "Logging in...",
+      "forgotPassword": "Forgot Password?",
+      "or": "OR",
+      "google": "Continue with Google",
+      "footer": "Don't have an account?",
+      "footerAction": "Sign Up",
+      "errors": {
+        "missingFields": "Please enter both email and password.",
+        "loginFailedTitle": "Login Failed",
+        "loginErrorTitle": "Login Error",
+        "loginErrorFallback": "An unexpected error occurred.",
+        "googleTitle": "Google Login",
+        "googleMessage": "Configure Google Cloud Console & Supabase first."
+      }
+    },
+    "signup": {
+      "title": "Create Account",
+      "subtitle": "Join Swift and start chatting with your friends.",
+      "emailLabel": "Email",
+      "passwordLabel": "Password",
+      "confirmPasswordLabel": "Confirm Password",
+      "emailPlaceholder": "name@example.com",
+      "passwordPlaceholder": "Create a password",
+      "confirmPasswordPlaceholder": "Repeat your password",
+      "button": "Sign Up",
+      "loading": "Creating Account...",
+      "footer": "Already have an account?",
+      "footerAction": "Log In",
+      "errors": {
+        "missingFields": "Please fill in all fields.",
+        "passwordMismatch": "Passwords do not match.",
+        "signUpFailedTitle": "Sign Up Failed"
+      },
+      "successTitle": "Success",
+      "successMessage": "Check your email for confirmation!"
+    }
+  },
+  "settings": {
+    "title": "Settings",
+    "general": "General",
+    "notifications": "Notifications",
+    "darkMode": "Dark Mode",
+    "useSystemTheme": "Use System Theme",
+    "security": "Security",
+    "locationSecurity": "Location Security",
+    "trustedDevices": "Trusted Devices",
+    "developer": "Developer",
+    "componentLab": "Component Lab",
+    "developerSettings": "Developer Settings",
+    "signOut": "Sign Out",
+    "appearance": "Appearance",
+    "customBackground": "Custom Background",
+    "removeBackground": "Remove Background",
+    "faceId": "Face ID / Touch ID",
+    "fingerprintFace": "Fingerprint / Face",
+    "trackLoginLocations": "Track Login Locations",
+    "securityNotifications": "Security Notifications",
+    "profile": "Profile",
+    "displayName": "Display Name",
+    "username": "Username",
+    "saving": "Saving...",
+    "account": "Account",
+    "testNotification": "Test Notification",
+    "testNotificationTitle": "🔔 Test Notification",
+    "testNotificationBody": "This is a test notification from Swift!",
+    "testNotificationLocalTitle": "🔔 Test Notification (Local)",
+    "testNotificationLocalBody": "This is a local test notification. Push notifications are working!",
+    "testNotificationSuccessTitle": "Success",
+    "testNotificationSuccessMessage": "Test notification sent! Check your notifications panel.",
+    "testNotificationErrorTitle": "Failed",
+    "testNotificationErrorMessage": "Failed to send test notification. Check console for details.",
+    "testNotificationAuthErrorTitle": "Error",
+    "testNotificationAuthErrorMessage": "You must be logged in to test notifications",
+    "biometricNotAvailableTitle": "Not Available",
+    "biometricNotAvailableMessage": "Biometric authentication is not available on this device.",
+    "biometricPrompt": "Authenticate to enable biometric login",
+    "removeBackgroundTitle": "Remove Background",
+    "removeBackgroundMessage": "Are you sure you want to remove the custom background?",
+    "imagePickerErrorTitle": "Error",
+    "imagePickerErrorMessage": "Failed to select image",
+    "cancel": "Cancel",
+    "remove": "Remove"
+  }
+}

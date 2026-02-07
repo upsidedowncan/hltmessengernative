@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/contexts/theme-context';
+import { TouchableRipple } from 'react-native-paper';
 import Animated, { 
   useSharedValue, 
   useAnimatedStyle, 
@@ -154,47 +155,93 @@ export const ChatListElement: React.FC<ChatListElementProps> = ({
 
       <GestureDetector gesture={panGesture}>
         <Animated.View style={[rRowStyle, { backgroundColor: bgColor }]}>
-          <TouchableOpacity
-            activeOpacity={1}
-            onPress={onPress}
-            style={styles.content}
-          >
-            <View style={styles.avatarContainer}>
-              {avatarUrl ? (
-                <Image source={{ uri: avatarUrl }} style={styles.avatar} />
-              ) : (
-                <View style={[styles.avatarPlaceholder, { backgroundColor: theme.border }]}>
-                  <Text style={[styles.avatarText, { color: subColor }]}>
-                    {title.substring(0, 1).toUpperCase()}
-                  </Text>
+          {isAndroid ? (
+            <TouchableRipple
+              onPress={onPress}
+              rippleColor={theme.tint + '15'}
+              style={styles.content}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                <View style={styles.avatarContainer}>
+                  {avatarUrl ? (
+                    <Image source={{ uri: avatarUrl }} style={styles.avatar} />
+                  ) : (
+                    <View style={[styles.avatarPlaceholder, { backgroundColor: theme.border }]}>
+                      <Text style={[styles.avatarText, { color: subColor }]}>
+                        {title.substring(0, 1).toUpperCase()}
+                      </Text>
+                    </View>
+                  )}
                 </View>
-              )}
-            </View>
 
-            <View style={styles.textContainer}>
-              <View style={styles.headerRow}>
-                <Text style={[styles.title, { color: txtColor }]} numberOfLines={1}>
-                  {title}
-                </Text>
-                {time && (
-                  <Text style={[styles.time, { color: subColor }]}>
-                    {time}
-                  </Text>
-                )}
+                <View style={styles.textContainer}>
+                  <View style={styles.headerRow}>
+                    <Text style={[styles.title, { color: txtColor }]} numberOfLines={1}>
+                      {title}
+                    </Text>
+                    {time && (
+                      <Text style={[styles.time, { color: subColor }]}>
+                        {time}
+                      </Text>
+                    )}
+                  </View>
+
+                  <View style={styles.messageRow}>
+                    <Text style={[styles.subtitle, { color: subColor }]} numberOfLines={1}>
+                      {subtitle}
+                    </Text>
+                    {unreadCount > 0 && (
+                      <View style={[styles.badge, { backgroundColor: theme.tint }]}>
+                        <Text style={styles.badgeText}>{unreadCount}</Text>
+                      </View>
+                    )}
+                  </View>
+                </View>
               </View>
-
-              <View style={styles.messageRow}>
-                <Text style={[styles.subtitle, { color: subColor }]} numberOfLines={1}>
-                  {subtitle}
-                </Text>
-                {unreadCount > 0 && (
-                  <View style={[styles.badge, { backgroundColor: theme.tint }]}>
-                    <Text style={styles.badgeText}>{unreadCount}</Text>
+            </TouchableRipple>
+          ) : (
+            <TouchableOpacity
+              activeOpacity={1}
+              onPress={onPress}
+              style={styles.content}
+            >
+              <View style={styles.avatarContainer}>
+                {avatarUrl ? (
+                  <Image source={{ uri: avatarUrl }} style={styles.avatar} />
+                ) : (
+                  <View style={[styles.avatarPlaceholder, { backgroundColor: theme.border }]}>
+                    <Text style={[styles.avatarText, { color: subColor }]}>
+                      {title.substring(0, 1).toUpperCase()}
+                    </Text>
                   </View>
                 )}
               </View>
-            </View>
-          </TouchableOpacity>
+
+              <View style={styles.textContainer}>
+                <View style={styles.headerRow}>
+                  <Text style={[styles.title, { color: txtColor }]} numberOfLines={1}>
+                    {title}
+                  </Text>
+                  {time && (
+                    <Text style={[styles.time, { color: subColor }]}>
+                      {time}
+                    </Text>
+                  )}
+                </View>
+
+                <View style={styles.messageRow}>
+                  <Text style={[styles.subtitle, { color: subColor }]} numberOfLines={1}>
+                    {subtitle}
+                  </Text>
+                  {unreadCount > 0 && (
+                    <View style={[styles.badge, { backgroundColor: theme.tint }]}>
+                      <Text style={styles.badgeText}>{unreadCount}</Text>
+                    </View>
+                  )}
+                </View>
+              </View>
+            </TouchableOpacity>
+          )}
           {!isAndroid && <View style={[styles.separator, { backgroundColor: theme.border }]} />}
         </Animated.View>
       </GestureDetector>

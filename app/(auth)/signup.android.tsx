@@ -1,12 +1,9 @@
 import React, { useState } from 'react';
 import {
   View,
-  Text,
-  TextInput,
   TouchableOpacity,
   StyleSheet,
   Alert,
-  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -15,7 +12,8 @@ import { useRouter } from 'expo-router';
 import { supabase } from '@/services/supabase';
 import { useTheme } from '@/contexts/theme-context';
 import { useMaterial3Theme } from '@pchmn/expo-material3-theme';
-import { Button, Surface, Text as RNPText } from 'react-native-paper';
+import { Button, Surface, Text as RNPText, TextInput as RNPTextInput } from 'react-native-paper';
+import { t } from '@/services/i18n';
 
 export default function SignUpScreen() {
   const router = useRouter();
@@ -30,11 +28,11 @@ export default function SignUpScreen() {
 
   const handleSignUp = async () => {
     if (!email || !password || !confirmPassword) {
-      Alert.alert('Error', 'Please fill in all fields.');
+      Alert.alert(t('common.error'), t('auth.signup.errors.missingFields'));
       return;
     }
     if (password !== confirmPassword) {
-      Alert.alert('Error', 'Passwords do not match.');
+      Alert.alert(t('common.error'), t('auth.signup.errors.passwordMismatch'));
       return;
     }
 
@@ -45,9 +43,9 @@ export default function SignUpScreen() {
     });
 
     if (error) {
-      Alert.alert('Sign Up Failed', error.message);
+      Alert.alert(t('auth.signup.errors.signUpFailedTitle'), error.message);
     } else {
-      Alert.alert('Success', 'Check your email for confirmation!');
+      Alert.alert(t('auth.signup.successTitle'), t('auth.signup.successMessage'));
       router.replace('/(auth)/login');
     }
     setLoading(false);
@@ -61,47 +59,44 @@ export default function SignUpScreen() {
       <ScrollView contentContainerStyle={styles.container}>
         <View style={styles.content}>
           <RNPText variant="headlineMedium" style={{ color: m3.onBackground, textAlign: 'center' }}>
-            Create Account
+            {t('auth.signup.title')}
           </RNPText>
           <RNPText variant="bodyMedium" style={{ color: m3.onSurfaceVariant, textAlign: 'center', marginTop: 8 }}>
-            Join HLT Messenger and start chatting with your friends.
+            {t('auth.signup.subtitle')}
           </RNPText>
 
-          <Surface style={[styles.form, { backgroundColor: m3.surface }]} elevation={1}>
+          <Surface style={[styles.form, { backgroundColor: m3.inverseOnSurface }]} elevation={1}>
             <View>
-              <RNPText variant="labelMedium" style={{ color: m3.onSurface, marginBottom: 6 }}>Email</RNPText>
-              <TextInput
-                style={[styles.input, { color: m3.onSurface, backgroundColor: m3.surfaceContainerHighest, borderColor: m3.outline }]}
+              <RNPText variant="labelMedium" style={{ color: m3.onSurface, marginBottom: 6 }}>{t('auth.signup.emailLabel')}</RNPText>
+              <RNPTextInput
+                mode="outlined"
                 value={email}
                 onChangeText={setEmail}
                 autoCapitalize="none"
                 keyboardType="email-address"
-                placeholder="name@example.com"
-                placeholderTextColor={m3.onSurfaceVariant}
+                placeholder={t('auth.signup.emailPlaceholder')}
               />
             </View>
 
             <View>
-              <RNPText variant="labelMedium" style={{ color: m3.onSurface, marginBottom: 6 }}>Password</RNPText>
-              <TextInput
-                style={[styles.input, { color: m3.onSurface, backgroundColor: m3.surfaceContainerHighest, borderColor: m3.outline }]}
+              <RNPText variant="labelMedium" style={{ color: m3.onSurface, marginBottom: 6 }}>{t('auth.signup.passwordLabel')}</RNPText>
+              <RNPTextInput
+                mode="outlined"
                 secureTextEntry
                 value={password}
                 onChangeText={setPassword}
-                placeholder="Create a password"
-                placeholderTextColor={m3.onSurfaceVariant}
+                placeholder={t('auth.signup.passwordPlaceholder')}
               />
             </View>
 
             <View>
-              <RNPText variant="labelMedium" style={{ color: m3.onSurface, marginBottom: 6 }}>Confirm Password</RNPText>
-              <TextInput
-                style={[styles.input, { color: m3.onSurface, backgroundColor: m3.surfaceContainerHighest, borderColor: m3.outline }]}
+              <RNPText variant="labelMedium" style={{ color: m3.onSurface, marginBottom: 6 }}>{t('auth.signup.confirmPasswordLabel')}</RNPText>
+              <RNPTextInput
+                mode="outlined"
                 secureTextEntry
                 value={confirmPassword}
                 onChangeText={setConfirmPassword}
-                placeholder="Repeat your password"
-                placeholderTextColor={m3.onSurfaceVariant}
+                placeholder={t('auth.signup.confirmPasswordPlaceholder')}
               />
             </View>
 
@@ -110,17 +105,17 @@ export default function SignUpScreen() {
               onPress={handleSignUp}
               loading={loading}
               disabled={loading}
-              style={[styles.button, { backgroundColor: m3.primary }]}
-              labelStyle={{ color: m3.onPrimary }}
+              buttonColor={m3.primary}
+              textColor={m3.onPrimary}
             >
-              Sign Up
+              {t('auth.signup.button')}
             </Button>
           </Surface>
 
           <View style={styles.footer}>
-            <RNPText variant="bodyMedium" style={{ color: m3.onSurfaceVariant }}>Already have an account?</RNPText>
+            <RNPText variant="bodyMedium" style={{ color: m3.onSurfaceVariant }}>{t('auth.signup.footer')}</RNPText>
             <TouchableOpacity onPress={() => router.push('/(auth)/login')}>
-              <RNPText variant="bodyMedium" style={{ color: m3.primary, fontWeight: 'bold' }}>Log In</RNPText>
+              <RNPText variant="bodyMedium" style={{ color: m3.primary, fontWeight: 'bold' }}>{t('auth.signup.footerAction')}</RNPText>
             </TouchableOpacity>
           </View>
         </View>
@@ -145,19 +140,6 @@ const styles = StyleSheet.create({
     gap: 16,
     padding: 20,
     borderRadius: 16,
-    marginTop: 10,
-  },
-  input: {
-    height: 50,
-    borderRadius: 12,
-    borderWidth: 1,
-    paddingHorizontal: 16,
-    fontSize: 16,
-  },
-  button: {
-    height: 50,
-    borderRadius: 12,
-    justifyContent: 'center',
     marginTop: 10,
   },
   footer: {

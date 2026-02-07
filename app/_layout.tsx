@@ -1,6 +1,7 @@
 import { Slot, useRouter, useSegments } from 'expo-router';
 import { useEffect, useState, useCallback } from 'react';
 import { View, ActivityIndicator, Platform } from 'react-native';
+import * as Notifications from 'expo-notifications';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -14,8 +15,12 @@ import { AuthProvider, useAuth } from '@/contexts/auth-context';
 import { SecurityProvider, useSecurity } from '@/contexts/security-context';
 import { FeatureFlagProvider, useFeatureFlags } from '@/contexts/feature-flag-context';
 import { ThemeProvider as CustomThemeProvider, useTheme } from '@/contexts/theme-context';
+import { CustomBackgroundProvider } from '@/contexts/custom-background-context';
 import { CallProvider } from '@/contexts/call-context';
 import { ToastProvider } from '@/contexts/toast-context';
+import { IncomingCallModal } from '@/components/incoming-call-modal';
+import { addCallListener } from '@/hooks/use-native-push';
+import { useCall } from '@/contexts/call-context';
 import { useDeepLinkHandler } from '@/hooks/use-deep-link-handler';
 import { HostWrapper } from '@/components/ui/host-wrapper';
 import SecurityBlockOverlay from './security-block-overlay';
@@ -28,10 +33,24 @@ function AuthProtection() {
   const { isBlocked } = useSecurity();
   const [biometricLocked, setBiometricLocked] = useState(false);
   const [biometricCheckDone, setBiometricCheckDone] = useState(false);
+  const [isReady, setIsReady] = useState(false);
   useDeepLinkHandler();
 
+  // Reset state when session changes
+  useEffect(() => {
+    if (!session) {
+      setBiometricCheckDone(true);
+      setBiometricLocked(false);
+      setIsReady(true);
+    }
+  }, [session]);
+
   const checkBiometric = useCallback(async () => {
-    if (loading || isBlocked) return;
+    if (!session || loading || isBlocked) {
+      setBiometricCheckDone(true);
+      setIsReady(true);
+      return;
+    }
 
     try {
       const biometricEnabled = await AsyncStorage.getItem('biometric_enabled');
@@ -48,15 +67,15 @@ function AuthProtection() {
       console.log('Biometric check error:', e);
     }
     setBiometricCheckDone(true);
-  }, [loading, isBlocked]);
+  }, [session, loading, isBlocked]);
 
   useEffect(() => {
-    if (!loading && session) {
+    if (!loading && session && !biometricCheckDone) {
       checkBiometric();
     } else if (!loading && !session) {
-      setBiometricCheckDone(true);
+      setIsReady(true);
     }
-  }, [loading, session, checkBiometric]);
+  }, [loading, session, biometricCheckDone, checkBiometric]);
 
   const authenticateBiometric = async () => {
     if (!biometricLocked) return true;
@@ -67,6 +86,7 @@ function AuthProtection() {
       });
       if (result.success) {
         setBiometricLocked(false);
+        setIsReady(true);
         return true;
       }
     } catch (e) {
@@ -76,13 +96,16 @@ function AuthProtection() {
   };
 
   useEffect(() => {
-    if (biometricLocked && biometricCheckDone && !isBlocked) {
+    if (biometricLocked && biometricCheckDone && !isBlocked && !isReady) {
       authenticateBiometric();
+    } else if (biometricCheckDone && !biometricLocked) {
+      setIsReady(true);
     }
-  }, [biometricLocked, biometricCheckDone, isBlocked]);
+  }, [biometricLocked, biometricCheckDone, isBlocked, isReady]);
 
+  // Handle navigation only when ready
   useEffect(() => {
-    if (loading) return;
+    if (loading || !isReady) return;
 
     const inAuthGroup = segments[0] === '(auth)';
 
@@ -91,9 +114,6 @@ function AuthProtection() {
         router.replace('/(auth)/login');
       }
     } else {
-      if (biometricLocked && !isBlocked) {
-        return;
-      }
       if (profile && !profile.username) {
         const inProfileSetup = segments[0] === 'profile-setup';
         if (!inProfileSetup) {
@@ -103,9 +123,10 @@ function AuthProtection() {
         router.replace('/(tabs)/chats');
       }
     }
-  }, [session, loading, segments, profile, biometricLocked, isBlocked]);
+  }, [session, loading, segments, profile, isReady]);
 
-  if (loading || (biometricLocked && !isBlocked)) {
+  // Show loading spinner while checking biometric or loading
+  if (loading || !isReady) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: theme.background }}>
         <ActivityIndicator size="large" color={theme.tint} />
@@ -184,21 +205,98 @@ function ThemeWrapper() {
   );
 }
 
+function CallModal() {
+  const router = useRouter();
+  const { setIsCallInProgress } = useCall();
+  const [pendingCall, setPendingCall] = useState<{
+    callerId: string | null;
+    callerName: string | null;
+    callType: 'audio' | 'video';
+  } | null>(null);
+
+  useEffect(() => {
+    const unsubscribe = addCallListener((data) => {
+      console.log('[CallModal] Received call event:', data);
+      setPendingCall({
+        callerId: data.callerId,
+        callerName: data.callerName,
+        callType: data.callType,
+      });
+    });
+
+    // Also check for last notification
+    Notifications.getLastNotificationResponseAsync().then(response => {
+      if (response) {
+        const data = response.notification.request.content.data as any;
+        if (data?.type === 'call' || data?.type === 'incoming_call') {
+          setPendingCall({
+            callerId: data?.caller_id || null,
+            callerName: data?.caller_name || 'Unknown',
+            callType: (data?.call_type as 'audio' | 'video') || 'video',
+          });
+        }
+      }
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, []);
+
+  const visible = !!pendingCall;
+
+  const handleAccept = () => {
+    if (pendingCall?.callerId) {
+      setIsCallInProgress(true);
+      router.push({
+        pathname: '/call/[id]',
+        params: {
+          id: pendingCall.callerId,
+          friendId: pendingCall.callerId,
+          friendName: pendingCall.callerName || 'Unknown',
+          isIncoming: 'true',
+          isVideo: pendingCall.callType === 'video' ? 'true' : 'false',
+        }
+      });
+      setPendingCall(null);
+    }
+  };
+
+  const handleDecline = () => {
+    setPendingCall(null);
+  };
+
+  if (!visible) return null;
+
+  return (
+    <IncomingCallModal
+      visible={visible}
+      callerName={pendingCall?.callerName || 'Unknown'}
+      callType={pendingCall?.callType || 'video'}
+      onAccept={handleAccept}
+      onDecline={handleDecline}
+    />
+  );
+}
+
 export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <AuthProvider>
         <SecurityProvider>
           <CustomThemeProvider>
-            <FeatureFlagProvider>
-              <ToastProvider>
-                <CallProvider>
-                  <SafeAreaProvider>
-                    <ThemeWrapper />
-                  </SafeAreaProvider>
-                </CallProvider>
-              </ToastProvider>
-            </FeatureFlagProvider>
+            <CustomBackgroundProvider>
+              <FeatureFlagProvider>
+                <ToastProvider>
+                  <CallProvider>
+                    <SafeAreaProvider>
+                      <ThemeWrapper />
+                      <CallModal />
+                    </SafeAreaProvider>
+                  </CallProvider>
+                </ToastProvider>
+              </FeatureFlagProvider>
+            </CustomBackgroundProvider>
           </CustomThemeProvider>
         </SecurityProvider>
       </AuthProvider>

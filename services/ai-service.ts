@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { supabase } from '@/services/supabase';
+import { supabase, supabaseUrl, supabaseAnonKey } from '@/services/supabase';
 import { Platform, Dimensions } from 'react-native';
 import * as FileSystem from 'expo-file-system/legacy';
 
@@ -30,6 +30,164 @@ const SETTINGS_KEY = 'ai_settings_v1';
 const CONVERSATIONS_KEY = 'ai_conversations_v1';
 const MESSAGES_PREFIX = 'ai_messages_v1_';
 const USAGE_KEY = 'ai_usage_stats_v1';
+
+// CDN Libraries for Visualization Generation
+export const VISUALIZATION_LIBRARIES = {
+  // 3D Graphics
+  threejs: {
+    name: 'Three.js',
+    url: 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js',
+    useCases: ['3D scenes', 'WebGL rendering', '3D games', '3D data visualization', 'virtual reality'],
+    snippet: `const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+const renderer = new THREE.WebGLRenderer();
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);`,
+  },
+  
+  // 2D Physics
+  matterjs: {
+    name: 'Matter.js',
+    url: 'https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js',
+    useCases: ['2D physics simulations', 'rigid body dynamics', 'collision detection', 'gravity', 'constraint solving'],
+    snippet: `const { Engine, Render, Runner, World, Bodies } = Matter;
+const engine = Engine.create();
+const render = Render.create({ element: document.body, engine: engine });
+const box = Bodies.rectangle(400, 200, 80, 80);
+const ground = Bodies.rectangle(400, 600, 810, 60, { isStatic: true });
+World.add(engine.world, [box, ground]);
+Runner.run(Runner.create(), engine);
+Render.run(render);`,
+  },
+  
+  // 3D Physics
+  cannones: {
+    name: 'Cannon-es',
+    url: 'https://cdn.jsdelivr.net/npm/cannon-es@0.20.0/dist/cannon-es.js',
+    useCases: ['3D physics', 'rigid body simulation', 'collision detection in 3D', 'joints and springs', 'physics-based games'],
+    snippet: `const world = new CANNON.World();
+world.gravity.set(0, -9.82, 0);
+const groundBody = new CANNON.Body({ mass: 0 });
+groundBody.addShape(new CANNON.Plane());
+world.addBody(groundBody);`,
+  },
+  
+  // Charts
+  chartjs: {
+    name: 'Chart.js',
+    url: 'https://cdn.jsdelivr.net/npm/chart.js',
+    useCases: ['Bar charts', 'line charts', 'pie/doughnut charts', 'radar charts', 'data visualization'],
+    snippet: `const ctx = document.getElementById('myChart').getContext('2d');
+const chart = new Chart(ctx, {
+  type: 'bar',
+  data: {
+    labels: ['Red', 'Blue', 'Yellow'],
+    datasets: [{
+      label: '# of Votes',
+      data: [12, 19, 3],
+      backgroundColor: ['red', 'blue', 'yellow']
+    }]
+  }
+});`,
+  },
+  
+  // Data Visualization
+  d3js: {
+    name: 'D3.js',
+    url: 'https://d3js.org/d3.v7.min.js',
+    useCases: ['Complex data visualizations', 'SVG charts', 'interactive graphics', 'geographic maps', 'network diagrams'],
+    snippet: `d3.select('body')
+  .append('svg')
+  .attr('width', 500)
+  .attr('height', 500)
+  .selectAll('circle')
+  .data([30, 10, 50, 20])
+  .enter()
+  .append('circle')
+  .attr('cx', (d, i) => i * 100 + 50)
+  .attr('cy', 250)
+  .attr('r', d => d)
+  .attr('fill', 'steelblue');`,
+  },
+  
+  // Creative Coding
+  p5js: {
+    name: 'p5.js',
+    url: 'https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/p5.min.js',
+    useCases: ['Creative coding', 'generative art', 'animations', 'interactive sketches', 'teaching programming'],
+    snippet: `function setup() {
+  createCanvas(400, 400);
+}
+
+function draw() {
+  background(220);
+  ellipse(mouseX, mouseY, 50, 50);
+}`,
+  },
+  
+  // 2D Games
+  phaser: {
+    name: 'Phaser',
+    url: 'https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js',
+    useCases: ['2D games', 'platformers', 'arcade games', 'RPGs', 'physics games'],
+    snippet: `const config = {
+  type: Phaser.AUTO,
+  width: 800,
+  height: 600,
+  scene: {
+    preload: function() { this.load.image('sky', 'sky.png'); },
+    create: function() { this.add.image(400, 300, 'sky'); },
+    update: function() { }
+  }
+};
+const game = new Phaser.Game(config);`,
+  },
+  
+  // 2D Graphics
+  pixijs: {
+    name: 'PixiJS',
+    url: 'https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.3.2/pixi.min.js',
+    useCases: ['2D graphics', 'particle systems', 'game sprites', 'filters and effects', 'interactive animations'],
+    snippet: `const app = new PIXI.Application({ width: 640, height: 360 });
+document.body.appendChild(app.view);
+const circle = new PIXI.Graphics();
+circle.beginFill(0xFFFF00);
+circle.drawCircle(0, 0, 50);
+circle.endFill();
+circle.x = 100;
+circle.y = 100;
+app.stage.addChild(circle);`,
+  },
+  
+  // Audio
+  tonejs: {
+    name: 'Tone.js',
+    url: 'https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js',
+    useCases: ['Audio synthesis', 'music generation', 'sound effects', 'interactive audio', 'musical instruments'],
+    snippet: `const synth = new Tone.Synth().toDestination();
+synth.triggerAttackRelease('C4', '8n');
+
+const loop = new Tone.Loop(time => {
+  synth.triggerAttackRelease('C4', '8n', time);
+}, '4n');
+Tone.Transport.start();
+loop.start(0);`,
+  },
+  
+  // Animation
+  gsap: {
+    name: 'GSAP',
+    url: 'https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js',
+    useCases: ['High-performance animations', 'complex timelines', 'scroll-triggered animations', 'SVG animations', 'morphing'],
+    snippet: `gsap.to('.box', {
+  x: 300,
+  rotation: 360,
+  duration: 2,
+  ease: 'power2.inOut',
+  stagger: 0.1
+});`,
+  },
+};
 
 export const AIService = {
   async getSettings(): Promise<AISettings> {
@@ -268,7 +426,7 @@ export const AIService = {
   ) {
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      const projectUrl = supabase.supabaseUrl;
+      const projectUrl = supabaseUrl;
       const provider = settings.provider || 'wafer';
 
       const allowed = await this.checkAndIncrementUsage(provider, settings.model);
@@ -280,7 +438,7 @@ export const AIService = {
       const functionUrl = `${projectUrl}/functions/v1/ai-chat?task=chat&provider=${provider}`;
 
       // @ts-ignore
-      const supabaseKey = supabase.supabaseKey;
+      const supabaseKey = supabaseAnonKey;
 
       const xhr = new XMLHttpRequest();
       xhr.open('POST', functionUrl);
@@ -321,7 +479,7 @@ export const AIService = {
           
           const { width } = Dimensions.get('window');
           const maxEmbedWidth = Math.floor(width * 0.75 - 32); // 75% width minus padding
-          finalSystemPrompt = `You are Mite, an intelligent AI assistant by HLT Messenger. You are helpful, witty, and concise.\n${contextInfo}\n\nUser Platform: ${Platform.OS}\n\nSPECIAL CAPABILITY: VISUALIZATIONS\nIf the user asks to visualize something, generate valid HTML/CSS/JS code.\n1. For simple inline animations, charts, or small UI elements, wrap the code in <VISUALIZATION_EMBED>...</VISUALIZATION_EMBED> tags.\n2. For games, landing pages, interactive websites, complex apps, or simulations, ALWAYS use <VISUALIZATION_FULL>...</VISUALIZATION_FULL> tags.\nCRITICAL: The content inside these tags must be ONLY valid HTML code. Do not include any conversational text, explanations, or markdown inside these tags. The HTML should be self-contained and MUST include <meta name="viewport" content="width=device-width, initial-scale=1.0"> in the head.\nIMPORTANT LAYOUT RULES:\n- For <VISUALIZATION_EMBED>, the available width is approximately ${maxEmbedWidth}px.\n- Ensure all elements are responsive (max-width: 100%).\n- Do not hardcode widths larger than ${maxEmbedWidth}px.\n\nSPECIAL CAPABILITY: IMAGE GENERATION\nIf the user asks to generate an image, output a JSON block wrapped in <IMAGE_GEN> tags.\nExample:\n<IMAGE_GEN>\n{\n  "prompt": "A futuristic city with flying cars",\n  "model": "@cf/black-forest-labs/flux-1-schnell"\n}\n</IMAGE_GEN>\nAvailable models: @cf/black-forest-labs/flux-1-schnell, @cf/stabilityai/stable-diffusion-xl-base-1.0\n\nSPECIAL CAPABILITY: PYTHON EXECUTION\nYou can write and execute Python code by wrapping it in <PYTHON_EXEC>...</PYTHON_EXEC> tags.\nThe code will be executed AUTOMATICALLY. You do not need to ask the user to run it.\nThe output will be returned to you in the next message.\nIf the output contains an error, fix the code and try again.\nIf the output is successful, proceed with your task.\n\nYou are running in a Vercel Serverless environment. You only have write access to the current working directory (which is /tmp/sandbox). Always use absolute paths when writing files: /tmp/sandbox/filename.txt.\nIf the user asks for data, write it to a file and the user will see a download link.\nIf you need to install packages, you can run: !pip install package_name (or !pip3)\nAvailable packages: numpy, pandas, matplotlib, Pillow, requests.\n\nFor matplotlib charts, you MUST save them as PNG: plt.savefig('/tmp/sandbox/chart.png')\nFor pandas DataFrames, you can display them: print(df.to_string())\n\nIMPORTANT: When using PYTHON_EXEC, always output valid Python code. The code will be executed immediately. Do not include markdown formatting or explanations inside the tags.`;
+          finalSystemPrompt = `You are Mite, an intelligent AI assistant by Swift. You are helpful, witty, and concise.\n${contextInfo}\n\nUser Platform: ${Platform.OS}\n\nSPECIAL CAPABILITY: VISUALIZATIONS\nIf the user asks to visualize something, generate valid HTML/CSS/JS code.\n1. For simple inline animations, charts, or small UI elements, wrap the code in <VISUALIZATION_EMBED>...</VISUALIZATION_EMBED> tags.\n2. For games, landing pages, interactive websites, complex apps, or simulations, ALWAYS use <VISUALIZATION_FULL>...</VISUALIZATION_FULL> tags.\nCRITICAL: The content inside these tags must be ONLY valid HTML code. Do not include any conversational text, explanations, or markdown inside these tags. The HTML should be self-contained and MUST include <meta name="viewport" content="width=device-width, initial-scale=1.0"> in the head.\nIMPORTANT LAYOUT RULES:\n- For <VISUALIZATION_EMBED>, the available width is approximately ${maxEmbedWidth}px.\n- Ensure all elements are responsive (max-width: 100%).\n- Do not hardcode widths larger than ${maxEmbedWidth}px.\n\nSPECIAL CAPABILITY: IMAGE GENERATION\nIf the user asks to generate an image, output a JSON block wrapped in <IMAGE_GEN> tags.\nExample:\n<IMAGE_GEN>\n{\n  "prompt": "A futuristic city with flying cars",\n  "model": "@cf/black-forest-labs/flux-1-schnell"\n}\n</IMAGE_GEN>\nAvailable models: @cf/black-forest-labs/flux-1-schnell, @cf/stabilityai/stable-diffusion-xl-base-1.0\n\nSPECIAL CAPABILITY: PYTHON EXECUTION\nYou can write and execute Python code by wrapping it in <PYTHON_EXEC>...</PYTHON_EXEC> tags.\nThe code will be executed AUTOMATICALLY. You do not need to ask the user to run it.\nThe output will be returned to you in the next message.\nIf the output contains an error, fix the code and try again.\nIf the output is successful, proceed with your task.\n\nYou are running in a Vercel Serverless environment. You only have write access to the current working directory (which is /tmp/sandbox). Always use absolute paths when writing files: /tmp/sandbox/filename.txt.\nIf the user asks for data, write it to a file and the user will see a download link.\nIf you need to install packages, you can run: !pip install package_name (or !pip3)\nAvailable packages: numpy, pandas, matplotlib, Pillow, requests.\n\nFor matplotlib charts, you MUST save them as PNG: plt.savefig('/tmp/sandbox/chart.png')\nFor pandas DataFrames, you can display them: print(df.to_string())\n\nIMPORTANT: When using PYTHON_EXEC, always output valid Python code. The code will be executed immediately. Do not include markdown formatting or explanations inside the tags.`;
       }
 
       const body = JSON.stringify({
@@ -398,7 +556,7 @@ export const AIService = {
   async generateSpeech(text: string): Promise<string | null> {
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      const projectUrl = supabase.supabaseUrl;
+      const projectUrl = supabaseUrl;
       const functionUrl = `${projectUrl}/functions/v1/ai-chat?task=chat&provider=nebula`;
       
       // Strip think tags and trim
@@ -406,7 +564,7 @@ export const AIService = {
       if (!cleanText) return null;
 
       // @ts-ignore
-      const supabaseKey = supabase.supabaseKey;
+      const supabaseKey = supabaseAnonKey;
 
       const body = {
         model: '@cf/myshell-ai/melotts',
@@ -466,11 +624,11 @@ export const AIService = {
       }
       console.log(`[AIService] Generating image with model: ${model}`);
 
-      const projectUrl = supabase.supabaseUrl;
+      const projectUrl = supabaseUrl;
       const functionUrl = `${projectUrl}/functions/v1/ai-chat?task=chat&provider=nebula`;
       
       // @ts-ignore
-      const supabaseKey = supabase.supabaseKey;
+      const supabaseKey = supabaseAnonKey;
 
       const body = {
         model: model,

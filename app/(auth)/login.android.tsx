@@ -3,10 +3,7 @@ import {
   Alert,
   View,
   StyleSheet,
-  TextInput,
-  Text,
   TouchableOpacity,
-  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -15,7 +12,8 @@ import { useRouter } from 'expo-router';
 import { supabase } from '@/services/supabase';
 import { useTheme } from '@/contexts/theme-context';
 import { useMaterial3Theme } from '@pchmn/expo-material3-theme';
-import { Button, Surface, Text as RNPText } from 'react-native-paper';
+import { Button, Surface, Text as RNPText, TextInput as RNPTextInput } from 'react-native-paper';
+import { t } from '@/services/i18n';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -29,7 +27,7 @@ export default function LoginScreen() {
 
   const handleLogin = async () => {
     if (!email || !password) {
-      Alert.alert('Error', 'Please enter both email and password.');
+      Alert.alert(t('common.error'), t('auth.login.errors.missingFields'));
       return;
     }
 
@@ -42,19 +40,22 @@ export default function LoginScreen() {
       });
 
       if (error) {
-        Alert.alert('Login Failed', error.message);
+        Alert.alert(t('auth.login.errors.loginFailedTitle'), error.message);
       } else {
         router.replace('/security-verification?justLoggedIn=true');
       }
     } catch (error: any) {
-      Alert.alert('Login Error', error.message || 'An unexpected error occurred.');
+      Alert.alert(
+        t('auth.login.errors.loginErrorTitle'),
+        error.message || t('auth.login.errors.loginErrorFallback')
+      );
     } finally {
       setLoading(false);
     }
   };
 
   const handleGoogleLogin = async () => {
-    Alert.alert('Google Login', 'Configure Google Cloud Console & Supabase first.');
+    Alert.alert(t('auth.login.errors.googleTitle'), t('auth.login.errors.googleMessage'));
   };
 
   return (
@@ -66,37 +67,35 @@ export default function LoginScreen() {
         <View style={styles.contentContainer}>
           <View style={styles.headerContainer}>
             <RNPText variant="headlineMedium" style={{ color: m3.onBackground, textAlign: 'center' }}>
-              Welcome Back
+              {t('auth.login.title')}
             </RNPText>
             <RNPText variant="bodyMedium" style={{ color: m3.onSurfaceVariant, textAlign: 'center', marginTop: 8 }}>
-              Log in to HLT Messenger to connect with your friends.
+              {t('auth.login.subtitle')}
             </RNPText>
           </View>
 
-          <Surface style={[styles.card, { backgroundColor: m3.surface }]} elevation={1}>
+          <Surface style={[styles.card, { backgroundColor: m3.inverseOnSurface }]} elevation={1}>
             <View style={styles.formContainer}>
               <View>
-                <RNPText variant="labelMedium" style={{ color: m3.onSurface, marginBottom: 6 }}>Email</RNPText>
-                <TextInput
-                  style={[styles.input, { color: m3.onSurface, backgroundColor: m3.surfaceContainerHighest, borderColor: m3.outline }]}
+                <RNPText variant="labelMedium" style={{ color: m3.onSurface, marginBottom: 6 }}>{t('auth.login.emailLabel')}</RNPText>
+                <RNPTextInput
+                  mode="outlined"
                   value={email}
                   onChangeText={setEmail}
                   autoCapitalize="none"
                   keyboardType="email-address"
-                  placeholder="name@example.com"
-                  placeholderTextColor={m3.onSurfaceVariant}
+                  placeholder={t('auth.login.emailPlaceholder')}
                 />
               </View>
 
               <View>
-                <RNPText variant="labelMedium" style={{ color: m3.onSurface, marginBottom: 6 }}>Password</RNPText>
-                <TextInput
-                  style={[styles.input, { color: m3.onSurface, backgroundColor: m3.surfaceContainerHighest, borderColor: m3.outline }]}
+                <RNPText variant="labelMedium" style={{ color: m3.onSurface, marginBottom: 6 }}>{t('auth.login.passwordLabel')}</RNPText>
+                <RNPTextInput
+                  mode="outlined"
                   secureTextEntry
                   value={password}
                   onChangeText={setPassword}
-                  placeholder="Enter your password"
-                  placeholderTextColor={m3.onSurfaceVariant}
+                  placeholder={t('auth.login.passwordPlaceholder')}
                 />
               </View>
 
@@ -105,41 +104,40 @@ export default function LoginScreen() {
                 onPress={handleLogin}
                 loading={loading}
                 disabled={loading}
-                style={[styles.button, { backgroundColor: m3.primary }]}
-                labelStyle={{ color: m3.onPrimary }}
+                buttonColor={m3.primary}
+                textColor={m3.onPrimary}
               >
-                Log In
+                {t('auth.login.button')}
               </Button>
 
               <TouchableOpacity
                 style={styles.centerContainer}
                 onPress={() => router.push('/(auth)/forgot-password')}
               >
-                <RNPText variant="bodyMedium" style={{ color: m3.primary }}>Forgot Password?</RNPText>
+                <RNPText variant="bodyMedium" style={{ color: m3.primary }}>{t('auth.login.forgotPassword')}</RNPText>
               </TouchableOpacity>
             </View>
           </Surface>
 
           <View style={styles.separatorContainer}>
             <View style={[styles.separator, { backgroundColor: m3.outline }]} />
-            <RNPText variant="bodyMedium" style={{ color: m3.onSurfaceVariant, marginHorizontal: 10 }}>OR</RNPText>
+            <RNPText variant="bodyMedium" style={{ color: m3.onSurfaceVariant, marginHorizontal: 10 }}>{t('auth.login.or')}</RNPText>
             <View style={[styles.separator, { backgroundColor: m3.outline }]} />
           </View>
 
           <Button
             mode="outlined"
             onPress={handleGoogleLogin}
-            style={[styles.outlineButton, { borderColor: m3.outline }]}
-            labelStyle={{ color: m3.onSurface }}
             icon="google"
+            textColor={m3.onSurface}
           >
-            Continue with Google
+            {t('auth.login.google')}
           </Button>
 
           <View style={styles.footerContainer}>
-            <RNPText variant="bodyMedium" style={{ color: m3.onSurfaceVariant }}>Don't have an account?</RNPText>
+            <RNPText variant="bodyMedium" style={{ color: m3.onSurfaceVariant }}>{t('auth.login.footer')}</RNPText>
             <TouchableOpacity onPress={() => router.push('/(auth)/signup')}>
-              <RNPText variant="bodyMedium" style={{ color: m3.primary, fontWeight: 'bold' }}>Sign Up</RNPText>
+              <RNPText variant="bodyMedium" style={{ color: m3.primary, fontWeight: 'bold' }}>{t('auth.login.footerAction')}</RNPText>
             </TouchableOpacity>
           </View>
         </View>
@@ -171,19 +169,6 @@ const styles = StyleSheet.create({
   formContainer: {
     gap: 16,
   },
-  input: {
-    height: 50,
-    borderRadius: 12,
-    borderWidth: 1,
-    paddingHorizontal: 16,
-    fontSize: 16,
-  },
-  button: {
-    height: 50,
-    borderRadius: 12,
-    justifyContent: 'center',
-    marginTop: 8,
-  },
   centerContainer: {
     alignItems: 'center',
     paddingVertical: 4,
@@ -195,11 +180,6 @@ const styles = StyleSheet.create({
   separator: {
     flex: 1,
     height: 1,
-  },
-  outlineButton: {
-    height: 50,
-    borderRadius: 12,
-    justifyContent: 'center',
   },
   footerContainer: {
     flexDirection: 'row',

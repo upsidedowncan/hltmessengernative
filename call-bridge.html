@@ -2,7 +2,7 @@
 <html>
   <head>
     <meta charset="utf-8">
-    <title>HLT Call Bridge</title>
+    <title>Swift Call Bridge</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
@@ -40,7 +40,7 @@
       }
 
       function initPeer(id) {
-        peer = new Peer('hlt-' + id);
+        peer = new Peer('swift-' + id);
         
         peer.on('open', (id) => {
           log('Peer ID: ' + id);
@@ -63,7 +63,7 @@
         try {
           log('Starting call to: ' + targetId);
           localStream = await getLocalStream();
-          currentCall = peer.call('hlt-' + targetId, localStream);
+          currentCall = peer.call('swift-' + targetId, localStream);
           setupCallListeners(currentCall);
         } catch (err) {
           log('Start Call Media error: ' + err.message);

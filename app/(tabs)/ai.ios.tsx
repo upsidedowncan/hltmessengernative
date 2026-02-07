@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, RefreshControl, Alert, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, RefreshControl, Alert, ScrollView, TouchableOpacity, Platform } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -7,6 +7,7 @@ import { useTheme } from '@/contexts/theme-context';
 import { AIService, AIConversation } from '@/services/ai-service';
 import { Button, Host } from '@expo/ui/swift-ui';
 import { LiquidGlassContainerView, LiquidGlassView, isLiquidGlassSupported } from '@callstack/liquid-glass';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 export default function AIChatListScreen() {
   const { theme } = useTheme();
@@ -54,25 +55,6 @@ export default function AIChatListScreen() {
   };
 
   const renderConversationItem = (item: AIConversation) => {
-    const content = (
-      <View style={styles.textContainer}>
-        <View style={styles.headerRow}>
-          <Text style={[styles.title, { color: theme.text }]}>
-            {item.title}
-          </Text>
-          <Text style={[styles.time, { color: theme.tabIconDefault }]}>
-            {new Date(item.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-          </Text>
-        </View>
-        <Text
-          numberOfLines={1}
-          style={[styles.subtitle, { color: theme.tabIconDefault }]}
-        >
-          {item.preview || 'No messages yet'}
-        </Text>
-      </View>
-    );
-
     return (
       <TouchableOpacity
         key={item.id}
@@ -80,28 +62,42 @@ export default function AIChatListScreen() {
         onLongPress={() => handleDelete(item.id)}
         activeOpacity={0.7}
       >
-        {isLiquidGlassSupported ? (
-          <LiquidGlassView
-            style={styles.itemContainer}
-            interactive
-            effect="clear"
-          >
-            {content}
-          </LiquidGlassView>
-        ) : (
-          <View style={[styles.itemContainer, { backgroundColor: theme.cardBackground }]}>
-            {content}
-          </View>
-        )}
+        <View style={styles.itemContainer}>
+           <View style={[styles.avatar, { backgroundColor: theme.tint + '20' }]}>
+               <MaterialCommunityIcons name="robot" size={26} color={theme.tint} />
+           </View>
+           <View style={styles.textContainer}>
+             <View style={styles.headerRow}>
+               <Text style={[styles.title, { color: theme.text }]} numberOfLines={1}>
+                 {item.title}
+               </Text>
+               <Text style={[styles.time, { color: theme.tabIconDefault }]}>
+                 {new Date(item.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+               </Text>
+             </View>
+             <Text
+               numberOfLines={1}
+               style={[styles.subtitle, { color: theme.tabIconDefault }]}
+             >
+               {item.preview || 'No messages yet'}
+             </Text>
+           </View>
+        </View>
+        <View style={[styles.separator, { backgroundColor: theme.borderColor }]} />
       </TouchableOpacity>
     );
   };
 
   return (
-      <View style={{ flex: 1, backgroundColor: '#000' }}>
+      <View style={{ flex: 1, backgroundColor: theme.background }}>
+        <View style={[styles.header, { marginTop: insets.top + 20 }]}>
+            <Text style={[styles.headerTitle, { color: theme.text }]}>AI Space</Text>
+        </View>
+
         <ScrollView
-          contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 16 }]}
+          contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 100 }]}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); loadConversations(); }} tintColor={theme.tint} />}
+          showsVerticalScrollIndicator={false}
         >
           {!loading && conversations.length === 0 && (
             <View style={styles.empty}>
@@ -109,24 +105,18 @@ export default function AIChatListScreen() {
             </View>
           )}
 
-          {isLiquidGlassSupported ? (
-            <LiquidGlassContainerView spacing={0}>
-              {conversations.map(item => renderConversationItem(item))}
-            </LiquidGlassContainerView>
-          ) : (
-            <View style={styles.fallbackContainer}>
-              {conversations.map(item => renderConversationItem(item))}
-            </View>
-          )}
+          <View style={styles.conversationsList}>
+            {conversations.map(item => renderConversationItem(item))}
+          </View>
         </ScrollView>
 
-        <View style={[styles.fabContainer, { bottom: insets.bottom + 16 }]}>
+        <View style={[styles.fabContainer, { bottom: insets.bottom + 20 }]}>
           <Host>
           <Button
             onPress={handleCreateNew}
             variant="glass"
           >
-          Create New
+          New AI Chat
           </Button>
           </Host>
         </View>
@@ -135,43 +125,70 @@ export default function AIChatListScreen() {
   };
 
   const styles = StyleSheet.create({
-    listContent: { 
-      paddingBottom: 100, 
-      paddingTop: 60,
-      paddingHorizontal: 16 
+    header: {
+        paddingHorizontal: 16,
+        paddingBottom: 16,
     },
-    empty: { alignItems: 'center', marginTop: 50 },
+    headerTitle: {
+        fontSize: 34,
+        fontWeight: '700',
+        letterSpacing: -0.5,
+    },
+    listContent: { 
+      paddingTop: 10,
+    },
+    conversationsList: {
+        marginTop: 0,
+    },
+    empty: { 
+        alignItems: 'center', 
+        marginTop: 100 
+    },
     fabContainer: {
       position: 'absolute',
       left: 20,
       right: 20,
       height: 50,
     },
-    fallbackContainer: {
-      gap: 8,
-    },
     itemContainer: {
-      paddingVertical: 16,
-      paddingHorizontal: 20,
-      borderRadius: 16,
+      flexDirection: 'row',
+      paddingVertical: 10,
+      paddingHorizontal: 16,
+      alignItems: 'center',
+    },
+    avatar: {
+        width: 48,
+        height: 48,
+        borderRadius: 24,
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     textContainer: {
       flex: 1,
+      marginLeft: 12,
+      justifyContent: 'center',
     },
     headerRow: {
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
-      marginBottom: 4,
+      marginBottom: 2,
     },
     title: {
-      fontSize: 16,
-      fontWeight: '600',
+      fontSize: 17,
+      fontWeight: '700',
+      flex: 1,
+      paddingRight: 8,
     },
     time: {
-      fontSize: 12,
+      fontSize: 14,
     },
     subtitle: {
       fontSize: 14,
+      lineHeight: 18,
+    },
+    separator: {
+        height: StyleSheet.hairlineWidth,
+        marginLeft: 76,
     }
   });

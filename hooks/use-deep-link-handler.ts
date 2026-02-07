@@ -11,9 +11,9 @@ export function useDeepLinkHandler() {
             const { url } = event;
             const parsed = Linking.parse(url);
             
-            // Expected format: hlt://<path>?param=value
+            // Expected format: swift://<path>?param=value
             
-            // Handle chat by username: hlt://chat?username=<username>
+            // Handle chat by username: swift://chat?username=<username>
             if (parsed.path === 'chat' && parsed.queryParams?.username) {
                 const username = parsed.queryParams.username as string;
                 try {

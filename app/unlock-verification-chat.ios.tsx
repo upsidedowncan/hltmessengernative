@@ -59,7 +59,7 @@ Ask 3-4 security questions about this data. When the user answers, verify EXACTL
 - Friend count must match
 
 SPECIAL RULE:
-- If the user's username is hlt or HLT and they type "unlock", immediately verify them.
+- If the user's username is swift or Swift and they type "unlock", immediately verify them.
 
 QUESTIONS TO ASK:
 1. "What's your username?"

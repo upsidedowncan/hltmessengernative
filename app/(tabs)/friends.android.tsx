@@ -4,13 +4,9 @@ import {
   Text,
   StyleSheet,
   FlatList,
-  TouchableOpacity,
-  TextInput,
-  ActivityIndicator,
   Alert,
   RefreshControl
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/services/supabase';
 import { useAuth } from '@/contexts/auth-context';
 import { useRouter } from 'expo-router';
@@ -20,6 +16,7 @@ import { useMaterial3Theme } from '@pchmn/expo-material3-theme';
 import { useTheme } from '@/contexts/theme-context';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Appbar, Surface, Searchbar, Chip, Button, IconButton } from 'react-native-paper';
+import { TouchableRipple } from '@/components/touchable-ripple';
 
 type Profile = {
   id: string;
@@ -36,11 +33,11 @@ type Friendship = {
   friend_profile?: Profile;
 };
 
-const Avatar = ({ name, backgroundColor }: { name: string; backgroundColor: string }) => {
-  const initials = name ? name.substring(0, 2).toUpperCase() : '??';
+const Avatar = ({ name, m3 }: { name: string; m3: any }) => {
+  const initials = name ? name.substring(0, 1).toUpperCase() : 'U';
   return (
-    <View style={[styles.avatar, { backgroundColor }]}>
-      <Text style={styles.avatarText}>{initials}</Text>
+    <View style={[styles.avatar, { backgroundColor: m3.primaryContainer }]}>
+      <Text style={[styles.avatarText, { color: m3.onPrimaryContainer }]}>{initials}</Text>
     </View>
   );
 };
@@ -191,14 +188,15 @@ export default function FriendsScreen() {
   };
 
   const renderFriendItem = ({ item }: { item: Friendship }) => (
-    <TouchableOpacity
+    <TouchableRipple
       onPress={() => openChat(item.friend_profile!.id, item.friend_profile!.full_name, item.friend_profile?.avatar_url || null)}
       onLongPress={() => handleRemoveFriend(item.id, item.friend_profile?.full_name || item.friend_profile?.username || 'User')}
+      rippleColor={m3.primary + '10'}
     >
-      <Surface style={[styles.itemContainer, { backgroundColor: m3.surface }]} elevation={0}>
-        <Avatar name={item.friend_profile?.full_name || item.friend_profile?.username || '?'} backgroundColor={m3.secondaryContainer} />
+      <View style={[styles.itemContainer, { backgroundColor: m3.background }]}>
+        <Avatar name={item.friend_profile?.full_name || item.friend_profile?.username || '?'} m3={m3} />
         <View style={styles.textContainer}>
-          <Text style={[styles.name, { color: m3.onSurface }]}>
+          <Text style={[styles.name, { color: m3.onSurface, fontWeight: '700' }]}>
             {item.friend_profile?.full_name}
           </Text>
           <Text style={[styles.username, { color: m3.onSurfaceVariant }]}>
@@ -206,50 +204,60 @@ export default function FriendsScreen() {
           </Text>
         </View>
         <IconButton
-          icon="chatbubble-ellipses-outline"
-          size={20}
+          icon="message-outline"
+          size={22}
           iconColor={m3.primary}
           onPress={() => openChat(item.friend_profile!.id, item.friend_profile!.full_name, item.friend_profile?.avatar_url || null)}
         />
-      </Surface>
-    </TouchableOpacity>
+      </View>
+    </TouchableRipple>
   );
 
   const renderRequestItem = ({ item }: { item: Friendship }) => (
-    <Surface style={[styles.itemContainer, { backgroundColor: m3.surface }]} elevation={0}>
-       <Avatar name={item.friend_profile?.full_name || '?'} backgroundColor={m3.secondaryContainer} />
-       <View style={styles.textContainer}>
-        <Text style={[styles.name, { color: m3.onSurfaceVariant }]}>Request from</Text>
-        <Text style={[styles.username, { color: m3.onSurface, fontWeight: '600' }]}>
-            {item.friend_profile?.username}
-        </Text>
+    <TouchableRipple
+      onPress={() => handleAcceptRequest(item.id)}
+      rippleColor={m3.primary + '10'}
+    >
+      <View style={[styles.itemContainer, { backgroundColor: m3.background }]}>
+         <Avatar name={item.friend_profile?.full_name || '?'} m3={m3} />
+         <View style={styles.textContainer}>
+          <Text style={[styles.name, { color: m3.onSurfaceVariant }]}>Request from</Text>
+          <Text style={[styles.username, { color: m3.onSurface, fontWeight: '600' }]}>
+              {item.friend_profile?.username}
+          </Text>
+        </View>
+        <Button
+          mode="contained"
+          onPress={() => handleAcceptRequest(item.id)}
+          buttonColor={m3.primary}
+          contentStyle={{ paddingHorizontal: 16 }}
+          labelStyle={{ fontSize: 12 }}
+        >
+          Accept
+        </Button>
       </View>
-      <Button
-        mode="contained"
-        onPress={() => handleAcceptRequest(item.id)}
-        buttonColor={m3.primary}
-        contentStyle={{ paddingHorizontal: 16 }}
-        labelStyle={{ fontSize: 12 }}
-      >
-        Accept
-      </Button>
-    </Surface>
+    </TouchableRipple>
   );
 
   const renderSearchResult = ({ item }: { item: Profile }) => (
-      <Surface style={[styles.itemContainer, { backgroundColor: m3.surface }]} elevation={0}>
-          <Avatar name={item.full_name || item.username} backgroundColor={m3.secondaryContainer} />
-          <View style={styles.textContainer}>
-              <Text style={[styles.name, { color: m3.onSurface }]}>{item.full_name}</Text>
-              <Text style={[styles.username, { color: m3.onSurfaceVariant }]}>@{item.username}</Text>
-          </View>
-          <IconButton
-            icon="account-plus"
-            size={20}
-            iconColor={m3.primary}
-            onPress={() => handleAddFriend(item.id)}
-          />
-      </Surface>
+      <TouchableRipple
+        onPress={() => handleAddFriend(item.id)}
+        rippleColor={m3.primary + '10'}
+      >
+        <View style={[styles.itemContainer, { backgroundColor: m3.background }]}>
+            <Avatar name={item.full_name || item.username} m3={m3} />
+            <View style={styles.textContainer}>
+                <Text style={[styles.name, { color: m3.onSurface }]}>{item.full_name}</Text>
+                <Text style={[styles.username, { color: m3.onSurfaceVariant }]}>@{item.username}</Text>
+            </View>
+            <IconButton
+              icon="account-plus"
+              size={20}
+              iconColor={m3.primary}
+              onPress={() => handleAddFriend(item.id)}
+            />
+        </View>
+      </TouchableRipple>
   );
 
   return (
@@ -340,10 +348,9 @@ const styles = StyleSheet.create({
   header: {
       paddingVertical: 10,
       paddingHorizontal: 16,
-      borderBottomWidth: StyleSheet.hairlineWidth,
   },
   listContent: {
-    paddingVertical: 8,
+    paddingVertical: 0,
     paddingBottom: 100,
   },
   chip: {
@@ -359,42 +366,39 @@ const styles = StyleSheet.create({
   itemContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
+    paddingVertical: 10,
     paddingHorizontal: 16,
-    marginHorizontal: 16,
-    marginVertical: 4,
-    borderRadius: 12,
   },
   avatar: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
     justifyContent: 'center',
     alignItems: 'center',
   },
   avatarText: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#fff',
+    fontWeight: '700',
   },
   textContainer: {
     flex: 1,
     marginLeft: 16,
+    height: 52,
     justifyContent: 'center',
   },
   name: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 15,
+    fontWeight: '700',
     marginBottom: 2,
   },
   username: {
-      fontSize: 14,
+      fontSize: 13,
   },
   status: {
     fontSize: 13,
   },
   separator: {
     height: StyleSheet.hairlineWidth,
-    marginLeft: 82,
+    marginLeft: 84,
   },
 });

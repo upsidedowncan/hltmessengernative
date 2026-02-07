@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ScrollView, StyleSheet, Text, View, Switch as RNSwitch, TouchableOpacity, Alert } from 'react-native';
+import { ScrollView, StyleSheet, Text, View, Switch as RNSwitch, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import * as LocalAuthentication from 'expo-local-authentication';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
@@ -10,20 +10,60 @@ import { ProfileHeader } from '@/components/profile-header';
 import { AppBar } from '@/components/app-bar';
 import { useAuth } from '@/contexts/auth-context';
 import { NotificationSetup } from '@/components/notification-setup';
+import { useSendNotification } from '@/hooks/use-send-notification';
+import * as Notifications from 'expo-notifications';
 import { supabase } from '@/services/supabase';
+import { t } from '@/services/i18n';
 
 export default function SettingsScreen() {
   const { theme, themeMode, setThemeMode } = useTheme();
   const { signOut, profile, refreshProfile, user } = useAuth();
   const router = useRouter();
+  const { sendNotification } = useSendNotification();
 
   const [username, setUsername] = useState('');
   const [fullName, setFullName] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [biometricEnabled, setBiometricEnabled] = useState(false);
   const [biometricAvailable, setBiometricAvailable] = useState(false);
+  const [testNotificationLoading, setTestNotificationLoading] = useState(false);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const firstLoad = useRef(true);
+
+  const sendTestNotification = async () => {
+    if (!user) {
+      Alert.alert(t('settings.testNotificationAuthErrorTitle'), t('settings.testNotificationAuthErrorMessage'));
+      return;
+    }
+
+    setTestNotificationLoading(true);
+    try {
+      await sendNotification({
+        userId: user.id,
+        title: t('settings.testNotificationTitle'),
+        body: t('settings.testNotificationBody'),
+        screen: 'chats',
+        params: {},
+      });
+      
+      // Also show a local notification since push won't appear in foreground
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: t('settings.testNotificationLocalTitle'),
+          body: t('settings.testNotificationLocalBody'),
+          data: { screen: 'chats' },
+        },
+        trigger: null, // Show immediately
+      });
+      
+      Alert.alert(t('settings.testNotificationSuccessTitle'), t('settings.testNotificationSuccessMessage'));
+    } catch (error) {
+      console.error('Test notification failed:', error);
+      Alert.alert(t('settings.testNotificationErrorTitle'), t('settings.testNotificationErrorMessage'));
+    } finally {
+      setTestNotificationLoading(false);
+    }
+  };
 
   useEffect(() => {
     const checkBiometric = async () => {
@@ -111,7 +151,7 @@ export default function SettingsScreen() {
       style={[styles.container, { backgroundColor: theme.background }]}
       showsVerticalScrollIndicator={false}
       contentInsetAdjustmentBehavior="automatic">
-      <AppBar title="Settings" isNative={true} largeTitle={true} />
+      <AppBar title={t('settings.title')} isNative={true} largeTitle={true} />
 
       <ProfileHeader 
         fullName={fullName}
@@ -122,16 +162,16 @@ export default function SettingsScreen() {
       />
 
       <View style={styles.section}>
-        <Text style={[styles.sectionTitle, { color: theme.text }]}>General</Text>
+        <Text style={[styles.sectionTitle, { color: theme.text }]}>{t('settings.general')}</Text>
         <View style={styles.groupContainer}>
           <Tile
-            title="Notifications"
+            title={t('settings.notifications')}
             icon="notifications-outline"
             onPress={() => {}}
             groupPosition="top"
           />
           <Tile
-            title="Dark Mode"
+            title={t('settings.darkMode')}
             icon="moon-outline"
             onPress={() => setThemeMode(themeMode === 'dark' ? 'light' : 'dark')}
             groupPosition="middle"
@@ -145,7 +185,7 @@ export default function SettingsScreen() {
             }
           />
           <Tile
-            title="Use System Theme"
+            title={t('settings.useSystemTheme')}
             icon="phone-portrait-outline"
             onPress={() => setThemeMode(themeMode === 'system' ? 'light' : 'system')}
             groupPosition="bottom"
@@ -162,20 +202,32 @@ export default function SettingsScreen() {
         </View>
         <View style={{ paddingHorizontal: 24 }}>
           <NotificationSetup />
+          
+          <TouchableOpacity 
+            style={[styles.testButton, { backgroundColor: theme.tint }]}
+            onPress={sendTestNotification}
+            disabled={testNotificationLoading}
+          >
+            {testNotificationLoading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.testButtonText}>{t('settings.testNotification')}</Text>
+            )}
+          </TouchableOpacity>
         </View>
       </View>
 
       <View style={styles.section}>
-        <Text style={[styles.sectionTitle, { color: theme.text }]}>Security</Text>
+        <Text style={[styles.sectionTitle, { color: theme.text }]}>{t('settings.security')}</Text>
         <View style={styles.groupContainer}>
           <Tile
-            title="Location Security"
+            title={t('settings.locationSecurity')}
             icon="location-outline"
             onPress={() => router.push('/security-settings')}
             groupPosition="top"
           />
           <Tile
-            title="Trusted Devices"
+            title={t('settings.trustedDevices')}
             icon="phone-portrait-outline"
             onPress={() => {}}
             groupPosition="bottom"
@@ -184,16 +236,16 @@ export default function SettingsScreen() {
       </View>
 
       <View style={styles.section}>
-        <Text style={[styles.sectionTitle, { color: theme.text }]}>Developer</Text>
+        <Text style={[styles.sectionTitle, { color: theme.text }]}>{t('settings.developer')}</Text>
         <View style={styles.groupContainer}>
           <Tile
-            title="Component Lab"
+            title={t('settings.componentLab')}
             icon="beaker-outline"
             onPress={() => router.push('/component-test')}
             groupPosition="top"
           />
           <Tile
-            title="Developer Settings"
+            title={t('settings.developerSettings')}
             icon="code-slash-outline"
             onPress={() => router.push('/dev-settings')}
             groupPosition="bottom"
@@ -204,7 +256,7 @@ export default function SettingsScreen() {
       <View style={styles.section}>
         <View style={{ paddingHorizontal: 24 }}>
           <Button
-            title="Sign Out"
+            title={t('settings.signOut')}
             onPress={signOut}
             type="outline"
             color="#ef5350"
@@ -276,5 +328,18 @@ const styles = StyleSheet.create({
   },
   groupContainer: {
     gap: 0,
+  },
+  testButton: {
+    marginTop: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  testButtonText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 14,
   },
 });

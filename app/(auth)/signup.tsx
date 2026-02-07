@@ -14,6 +14,7 @@ import {
 import { useRouter } from 'expo-router';
 import { supabase } from '@/services/supabase';
 import { useTheme } from '@/contexts/theme-context';
+import { t } from '@/services/i18n';
 
 export default function SignUpScreen() {
   const router = useRouter();
@@ -25,11 +26,11 @@ export default function SignUpScreen() {
 
   const handleSignUp = async () => {
     if (!email || !password || !confirmPassword) {
-      Alert.alert('Error', 'Please fill in all fields.');
+      Alert.alert(t('common.error'), t('auth.signup.errors.missingFields'));
       return;
     }
     if (password !== confirmPassword) {
-      Alert.alert('Error', 'Passwords do not match.');
+      Alert.alert(t('common.error'), t('auth.signup.errors.passwordMismatch'));
       return;
     }
 
@@ -40,9 +41,9 @@ export default function SignUpScreen() {
     });
 
     if (error) {
-      Alert.alert('Sign Up Failed', error.message);
+      Alert.alert(t('auth.signup.errors.signUpFailedTitle'), error.message);
     } else {
-      Alert.alert('Success', 'Check your email for confirmation!');
+      Alert.alert(t('auth.signup.successTitle'), t('auth.signup.successMessage'));
       router.replace('/(auth)/login');
     }
     setLoading(false);
@@ -55,45 +56,45 @@ export default function SignUpScreen() {
     >
       <ScrollView contentContainerStyle={styles.container}>
         <View style={styles.content}>
-          <Text style={[styles.title, { color: theme.text }]}>Create Account</Text>
+          <Text style={[styles.title, { color: theme.text }]}>{t('auth.signup.title')}</Text>
           <Text style={[styles.subtitle, { color: theme.text, opacity: 0.7 }]}>
-            Join HLT Messenger and start chatting with your friends.
+            {t('auth.signup.subtitle')}
           </Text>
 
           <View style={styles.form}>
             <View>
-              <Text style={[styles.label, { color: theme.text }]}>Email</Text>
+              <Text style={[styles.label, { color: theme.text }]}>{t('auth.signup.emailLabel')}</Text>
               <TextInput
                 style={[styles.input, { color: theme.text, borderColor: theme.border, backgroundColor: theme.cardBackground }]}
                 value={email}
                 onChangeText={setEmail}
                 autoCapitalize="none"
                 keyboardType="email-address"
-                placeholder="name@example.com"
+                placeholder={t('auth.signup.emailPlaceholder')}
                 placeholderTextColor={theme.tabIconDefault}
               />
             </View>
 
             <View>
-              <Text style={[styles.label, { color: theme.text }]}>Password</Text>
+              <Text style={[styles.label, { color: theme.text }]}>{t('auth.signup.passwordLabel')}</Text>
               <TextInput
                 style={[styles.input, { color: theme.text, borderColor: theme.border, backgroundColor: theme.cardBackground }]}
                 secureTextEntry
                 value={password}
                 onChangeText={setPassword}
-                placeholder="Create a password"
+                placeholder={t('auth.signup.passwordPlaceholder')}
                 placeholderTextColor={theme.tabIconDefault}
               />
             </View>
 
             <View>
-              <Text style={[styles.label, { color: theme.text }]}>Confirm Password</Text>
+              <Text style={[styles.label, { color: theme.text }]}>{t('auth.signup.confirmPasswordLabel')}</Text>
               <TextInput
                 style={[styles.input, { color: theme.text, borderColor: theme.border, backgroundColor: theme.cardBackground }]}
                 secureTextEntry
                 value={confirmPassword}
                 onChangeText={setConfirmPassword}
-                placeholder="Repeat your password"
+                placeholder={t('auth.signup.confirmPasswordPlaceholder')}
                 placeholderTextColor={theme.tabIconDefault}
               />
             </View>
@@ -106,15 +107,15 @@ export default function SignUpScreen() {
               {loading ? (
                 <ActivityIndicator color="#fff" />
               ) : (
-                <Text style={styles.buttonText}>Sign Up</Text>
+                <Text style={styles.buttonText}>{t('auth.signup.button')}</Text>
               )}
             </TouchableOpacity>
           </View>
 
           <View style={styles.footer}>
-            <Text style={{ color: theme.text, opacity: 0.7 }}>Already have an account?</Text>
+            <Text style={{ color: theme.text, opacity: 0.7 }}>{t('auth.signup.footer')}</Text>
             <TouchableOpacity onPress={() => router.push('/(auth)/login')}>
-              <Text style={{ color: theme.tint, fontWeight: 'bold' }}>Log In</Text>
+              <Text style={{ color: theme.tint, fontWeight: 'bold' }}>{t('auth.signup.footerAction')}</Text>
             </TouchableOpacity>
           </View>
         </View>

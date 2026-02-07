@@ -1,0 +1,100 @@
+{
+  "app": {
+    "name": "Swift"
+  },
+  "common": {
+    "error": "Ошибка"
+  },
+  "auth": {
+    "login": {
+      "title": "С возвращением",
+      "subtitle": "Войдите в Swift, чтобы общаться с друзьями.",
+      "emailLabel": "Почта",
+      "passwordLabel": "Пароль",
+      "emailPlaceholder": "name@example.com",
+      "passwordPlaceholder": "Введите пароль",
+      "button": "Войти",
+      "loading": "Входим...",
+      "forgotPassword": "Забыли пароль?",
+      "or": "ИЛИ",
+      "google": "Продолжить с Google",
+      "footer": "Нет аккаунта?",
+      "footerAction": "Зарегистрироваться",
+      "errors": {
+        "missingFields": "Введите почту и пароль.",
+        "loginFailedTitle": "Не удалось войти",
+        "loginErrorTitle": "Ошибка входа",
+        "loginErrorFallback": "Произошла непредвиденная ошибка.",
+        "googleTitle": "Вход через Google",
+        "googleMessage": "Сначала настройте Google Cloud Console и Supabase."
+      }
+    },
+    "signup": {
+      "title": "Создать аккаунт",
+      "subtitle": "Присоединяйтесь к Swift и начинайте общаться с друзьями.",
+      "emailLabel": "Почта",
+      "passwordLabel": "Пароль",
+      "confirmPasswordLabel": "Подтвердите пароль",
+      "emailPlaceholder": "name@example.com",
+      "passwordPlaceholder": "Придумайте пароль",
+      "confirmPasswordPlaceholder": "Повторите пароль",
+      "button": "Зарегистрироваться",
+      "loading": "Создание аккаунта...",
+      "footer": "Уже есть аккаунт?",
+      "footerAction": "Войти",
+      "errors": {
+        "missingFields": "Заполните все поля.",
+        "passwordMismatch": "Пароли не совпадают.",
+        "signUpFailedTitle": "Ошибка регистрации"
+      },
+      "successTitle": "Успешно",
+      "successMessage": "Проверьте почту для подтверждения!"
+    }
+  },
+  "settings": {
+    "title": "Настройки",
+    "general": "Общие",
+    "notifications": "Уведомления",
+    "darkMode": "Тёмная тема",
+    "useSystemTheme": "Системная тема",
+    "security": "Безопасность",
+    "locationSecurity": "Защита по локации",
+    "trustedDevices": "Доверенные устройства",
+    "developer": "Для разработчиков",
+    "componentLab": "Лаб компонентов",
+    "developerSettings": "Настройки разработчика",
+    "signOut": "Выйти",
+    "appearance": "Внешний вид",
+    "customBackground": "Пользовательский фон",
+    "removeBackground": "Удалить фон",
+    "faceId": "Face ID / Touch ID",
+    "fingerprintFace": "Отпечаток / Лицо",
+    "trackLoginLocations": "Отслеживать входы по локации",
+    "securityNotifications": "Уведомления безопасности",
+    "profile": "Профиль",
+    "displayName": "Имя",
+    "username": "Имя пользователя",
+    "saving": "Сохранение...",
+    "account": "Аккаунт",
+    "testNotification": "Тестовое уведомление",
+    "testNotificationTitle": "🔔 Тестовое уведомление",
+    "testNotificationBody": "Это тестовое уведомление от Swift!",
+    "testNotificationLocalTitle": "🔔 Тестовое уведомление (локальное)",
+    "testNotificationLocalBody": "Это локальное тестовое уведомление. Push-уведомления работают!",
+    "testNotificationSuccessTitle": "Успешно",
+    "testNotificationSuccessMessage": "Тестовое уведомление отправлено. Проверьте панель уведомлений.",
+    "testNotificationErrorTitle": "Ошибка",
+    "testNotificationErrorMessage": "Не удалось отправить уведомление. Проверьте консоль.",
+    "testNotificationAuthErrorTitle": "Ошибка",
+    "testNotificationAuthErrorMessage": "Нужно войти в аккаунт, чтобы тестировать уведомления",
+    "biometricNotAvailableTitle": "Недоступно",
+    "biometricNotAvailableMessage": "Биометрия недоступна на этом устройстве.",
+    "biometricPrompt": "Подтвердите личность для входа по биометрии",
+    "removeBackgroundTitle": "Удалить фон",
+    "removeBackgroundMessage": "Удалить пользовательский фон?",
+    "imagePickerErrorTitle": "Ошибка",
+    "imagePickerErrorMessage": "Не удалось выбрать изображение",
+    "cancel": "Отмена",
+    "remove": "Удалить"
+  }
+}

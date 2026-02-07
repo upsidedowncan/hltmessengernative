@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "Swift Messenger",
-    "slug": "swiftapp",
-    "scheme": "swiftapp",
+    "name": "Bolt",
+    "slug": "bolt",
+    "scheme": "bolt",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/logo_combined.png",

@@ -1,6 +1,6 @@
 {
   "app": {
-    "name": "Swift"
+    "name": "Bolt"
   },
   "common": {
     "error": "Error"
@@ -8,7 +8,7 @@
   "auth": {
     "login": {
       "title": "Welcome Back",
-      "subtitle": "Log in to Swift to connect with your friends.",
+      "subtitle": "Log in to Bolt to connect with your friends.",
       "emailLabel": "Email",
       "passwordLabel": "Password",
       "emailPlaceholder": "name@example.com",
@@ -31,7 +31,7 @@
     },
     "signup": {
       "title": "Create Account",
-      "subtitle": "Join Swift and start chatting with your friends.",
+      "subtitle": "Join Bolt and start chatting with your friends.",
       "emailLabel": "Email",
       "passwordLabel": "Password",
       "confirmPasswordLabel": "Confirm Password",
@@ -78,7 +78,7 @@
     "account": "Account",
     "testNotification": "Test Notification",
     "testNotificationTitle": "🔔 Test Notification",
-    "testNotificationBody": "This is a test notification from Swift!",
+    "testNotificationBody": "This is a test notification from Bolt!",
     "testNotificationLocalTitle": "🔔 Test Notification (Local)",
     "testNotificationLocalBody": "This is a local test notification. Push notifications are working!",
     "testNotificationSuccessTitle": "Success",

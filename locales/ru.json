@@ -1,6 +1,6 @@
 {
   "app": {
-    "name": "Swift"
+    "name": "Bolt"
   },
   "common": {
     "error": "Ошибка"
@@ -8,7 +8,7 @@
   "auth": {
     "login": {
       "title": "С возвращением",
-      "subtitle": "Войдите в Swift, чтобы общаться с друзьями.",
+      "subtitle": "Войдите в Bolt, чтобы общаться с друзьями.",
       "emailLabel": "Почта",
       "passwordLabel": "Пароль",
       "emailPlaceholder": "name@example.com",
@@ -31,7 +31,7 @@
     },
     "signup": {
       "title": "Создать аккаунт",
-      "subtitle": "Присоединяйтесь к Swift и начинайте общаться с друзьями.",
+      "subtitle": "Присоединяйтесь к Bolt и начинайте общаться с друзьями.",
       "emailLabel": "Почта",
       "passwordLabel": "Пароль",
       "confirmPasswordLabel": "Подтвердите пароль",
@@ -78,7 +78,7 @@
     "account": "Аккаунт",
     "testNotification": "Тестовое уведомление",
     "testNotificationTitle": "🔔 Тестовое уведомление",
-    "testNotificationBody": "Это тестовое уведомление от Swift!",
+    "testNotificationBody": "Это тестовое уведомление от Bolt!",
     "testNotificationLocalTitle": "🔔 Тестовое уведомление (локальное)",
     "testNotificationLocalBody": "Это локальное тестовое уведомление. Push-уведомления работают!",
     "testNotificationSuccessTitle": "Успешно",
